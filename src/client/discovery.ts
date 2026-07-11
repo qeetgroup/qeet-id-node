@@ -38,11 +38,15 @@ export async function discover(issuer: string, fetchImpl: typeof fetch = fetch):
   const trimmed = issuer.replace(/\/+$/, "");
   const url = trimmed.endsWith(DISCOVERY_PATH) ? trimmed : trimmed + DISCOVERY_PATH;
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
   let res: Response;
   try {
-    res = await fetchImpl(url, { headers: { accept: "application/json", "user-agent": userAgent() } });
+    res = await fetchImpl(url, { headers: { accept: "application/json", "user-agent": userAgent() }, signal: controller.signal });
   } catch (err) {
     throw new NetworkError(`discovery fetch: ${err instanceof Error ? err.message : String(err)}`, err);
+  } finally {
+    clearTimeout(timer);
   }
   if (!res.ok) {
     throw new ApiError({ status: res.status, code: "discovery_error", message: "discovery fetch failed" });

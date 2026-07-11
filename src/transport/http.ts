@@ -1,3 +1,4 @@
+import { ApiError } from "../errors/index.js";
 import type { Logger } from "../types/common.js";
 import { SDK_VERSION } from "../version.js";
 import { parseErrorBody } from "./errors.js";
@@ -173,7 +174,12 @@ export class Transport {
     try {
       return JSON.parse(text) as T;
     } catch (err) {
-      throw new Error(`qeet-id-node: decode response (request ${requestId ?? "unknown"}): ${(err as Error).message}`);
+      throw new ApiError({
+        status: res.status,
+        code: "decode_error",
+        message: `decode response (request ${requestId ?? "unknown"}): ${(err as Error).message}`,
+        requestId,
+      });
     }
   }
 
