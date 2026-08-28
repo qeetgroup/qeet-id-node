@@ -4,6 +4,11 @@ import { base64UrlDecode } from "./crypto.js";
 
 const DEFAULT_CLOCK_SKEW_SECONDS = 30;
 const JWKS_CACHE_TTL_MS = 5 * 60 * 1000;
+// Bounds how often an unknown/garbage kid may trigger an out-of-band JWKS
+// refetch. Without it, tokens bearing random kids force one upstream fetch per
+// request — a cheap amplification vector. A rotated-in key is still picked up
+// within this window.
+const JWKS_REFRESH_COOLDOWN_MS = 60 * 1000;
 
 interface Jwk {
   kty: string;
@@ -45,6 +50,8 @@ export class JWKSVerifier {
   private readonly fetchImpl: typeof fetch;
   private keys: Map<string, webcrypto.CryptoKey> | null = null;
   private fetchedAt = 0;
+  private lastRefreshAt = 0; // last refresh *attempt*; throttles cache-miss refetches
+  private refreshing: Promise<void> | null = null; // de-dupes concurrent refreshes
 
   constructor(jwksUrl: string, fetchImpl: typeof fetch = fetch) {
     this.jwksUrl = jwksUrl;
@@ -97,11 +104,29 @@ export class JWKSVerifier {
   private async resolveKey(kid: string): Promise<webcrypto.CryptoKey> {
     let key = this.lookup(kid, false);
     if (!key) {
-      await this.refresh();
+      // Cache miss. Refresh at most once per JWKS_REFRESH_COOLDOWN_MS so that
+      // tokens bearing an unknown/garbage kid can't force an unbounded number
+      // of upstream JWKS fetches (one per request) — a cheap amplification
+      // vector. Concurrent callers share a single in-flight fetch.
+      await this.maybeRefresh();
       key = this.lookup(kid, true);
     }
     if (!key) throw new AuthError("invalid_token", `no JWKS key for kid ${kid}`);
     return key;
+  }
+
+  private maybeRefresh(): Promise<void> {
+    if (this.refreshing) return this.refreshing;
+    // First fetch (no keys yet) is always allowed; later cache-miss refreshes
+    // are rate-limited.
+    if (this.keys && Date.now() - this.lastRefreshAt < JWKS_REFRESH_COOLDOWN_MS) {
+      return Promise.resolve();
+    }
+    this.lastRefreshAt = Date.now();
+    this.refreshing = this.refresh().finally(() => {
+      this.refreshing = null;
+    });
+    return this.refreshing;
   }
 
   private lookup(kid: string, forceFresh: boolean): webcrypto.CryptoKey | undefined {
