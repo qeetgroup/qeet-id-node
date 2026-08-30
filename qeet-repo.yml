@@ -58,7 +58,7 @@ ci:
   workflows: [ci.yml, codeql.yml, lint.yml, release.yml, security.yml]
   matrix: ["18.17", "20", "22", "24"]
   note: ci.yml does NOT run lint — lint lives only in lint.yml
-  release: tag v* -> pnpm publish --access public
+  release: push main -> bump package.json -> gate -> pnpm publish --access public --provenance -> tag vX.Y.Z
 
 security:
   sensitive_paths:
