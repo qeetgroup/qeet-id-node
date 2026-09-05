@@ -19,7 +19,7 @@ export interface AdminLink {
   created_at: string;
 }
 
-/** CreateAdminLinkInput — `ttl_seconds` is clamped server-side to [15min, 7d], defaulting to 24h when zero. */
+/** CreateAdminLinkInput — `ttl_seconds` is clamped server-side to [15min, 24h], defaulting to 1h when zero. */
 export interface CreateAdminLinkInput {
   capabilities: string[];
   ttl_seconds?: number;
@@ -35,9 +35,9 @@ export interface CreateAdminLinkResult {
 /**
  * AdminLinksService manages delegated admin-portal links (renamed from the
  * earlier "AdminPortal" naming — this manages links/tokens, not a portal
- * itself). The public token-based portal session
- * (`/admin-portal/{token}/...`) is for the external IT admin's own browser
- * session and isn't wrapped here.
+ * itself). The external IT admin's browser exchanges the generated URL's
+ * fragment token once for a short-lived, HttpOnly portal session; that browser
+ * flow isn't wrapped here.
  */
 export class AdminLinksService {
   constructor(private readonly t: Transport) {}
