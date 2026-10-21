@@ -91,9 +91,19 @@ export class TokenVaultService {
    * caller's own tenant/user context, transparently refreshing it first if
    * it's expired (or about to be) and a refresh token is on file. The raw
    * refresh token itself is never returned.
+   *
+   * @deprecated This hands your code the raw third-party token, which then
+   * tends to be stored, logged or put into a model's prompt, outside the
+   * vault's controls; agents must never receive it. Use the brokered call,
+   * `tokenVault.call()`, where Qeet ID makes the provider request for you,
+   * once the platform offers it (QTID-218). Until then, keep the token in
+   * memory for one request only. Removed in the first release after brokered
+   * calls ship, the same point as the Go SDK (QTID-246). Each process gets one
+   * `QEETID_RAW_VAULT_TOKEN` warning the first time this is called.
    */
   getAccessToken(provider: string, opts?: RequestOpts): Promise<AccessTokenResult> {
     required("provider", provider);
+    warnRawVaultToken();
     return this.t.get<AccessTokenResult>(`/v1/vault/tokens/${encodeURIComponent(provider)}/access-token`, opts);
   }
 
@@ -102,4 +112,23 @@ export class TokenVaultService {
     required("provider", provider);
     return this.t.delete(`/v1/vault/tokens/${encodeURIComponent(provider)}`, opts);
   }
+}
+
+let rawVaultTokenWarned = false;
+
+/** Emits the raw-vault-token deprecation once per process (Node's process warnings). */
+function warnRawVaultToken(): void {
+  if (rawVaultTokenWarned) return;
+  rawVaultTokenWarned = true;
+  if (typeof process !== "undefined" && typeof process.emitWarning === "function") {
+    process.emitWarning(
+      "tokenVault.getAccessToken() returns the raw third-party token; keep it out of storage, logs and prompts, and move to tokenVault.call() when brokered calls ship (QTID-218).",
+      { type: "DeprecationWarning", code: "QEETID_RAW_VAULT_TOKEN" },
+    );
+  }
+}
+
+/** Test seam: forget that the raw-vault-token warning was emitted. @internal */
+export function resetRawVaultTokenWarningForTests(): void {
+  rawVaultTokenWarned = false;
 }
