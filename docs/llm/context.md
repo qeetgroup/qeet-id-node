@@ -6,9 +6,9 @@ source. Publication status checked against the npm registry.
 
 ## Identity
 
-`@qeet-id/node` v0.1.0 — the server-side Node/TypeScript SDK for Qeet ID. Node ≥18.17
-(`.nvmrc` pins 24), pnpm 10.32.1, **zero runtime dependencies**. Built by `tsup` into dual ESM/CJS
-with `dts: true`, target `node18`.
+`@qeet-id/node` v0.1.0 — the server-side Node/TypeScript SDK for Qeet ID. Node ≥22
+(`.nvmrc` pins 24), bun 1.4.3 and Biome, **zero runtime dependencies**. Built by `tsup` into dual ESM/CJS
+with `dts: true`, target `node22`.
 
 **Status: `development`. Not published — npm returns 404** for `@qeet-id/node`, and the repository
 carries no release tag. See `qeet-id-context/DRIFT-REGISTER.md` QID-009.
@@ -112,11 +112,11 @@ The event payload is **parsed eagerly**; Go defers it as `json.RawMessage`.
 
 | Workflow       | Runs                                                                              |
 | -------------- | --------------------------------------------------------------------------------- |
-| `ci.yml`       | Node 18.17/20/22/24 — install, `typecheck`, `build`, `test:coverage`. **No lint** |
-| `lint.yml`     | `pnpm lint` + `prettier --check`                                                  |
-| `security.yml` | `pnpm audit --prod=false --audit-level=high` + gitleaks                           |
+| `ci.yml`       | Node 22/24/26 — `bun install`, `typecheck`, `build`, `test:coverage`. **No lint** |
+| `lint.yml`     | `bun run check` (Biome: lint and formatting)                                      |
+| `security.yml` | `bun audit --audit-level=high` + gitleaks                                         |
 | `codeql.yml`   | JS/TS, no autobuild step                                                          |
-| `release.yml`  | tag `v*` — install, typecheck, lint, test, build, `pnpm publish --access public`  |
+| `release.yml`  | push to `main` — install, typecheck, check, test, build, `npm publish --provenance` |
 
 Note the asymmetry: **`ci.yml` omits lint here but includes it in `qeet-id-react`.**
 
@@ -134,7 +134,7 @@ Note the asymmetry: **`ci.yml` omits lint here but includes it in `qeet-id-react
 ## Known constraints
 
 - **Zero runtime dependencies is a hard rule.**
-- Node ≥18.17 — the floor is enforced by `engines`.
+- Node ≥22 — the floor is enforced by `engines`.
 - There is no `src/constants/` — defaults live beside the code that uses them.
 - `JWKSVerifier` is not reachable from the package root.
 - Not published, so contract changes are currently free. That ends at the first release.

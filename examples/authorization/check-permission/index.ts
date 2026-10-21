@@ -1,7 +1,7 @@
 // Runs an RBAC check and prints the grant path that decided it (explain),
 // not just the boolean.
 //
-//   QEETID_API_KEY=qk_… npx tsx examples/authorization/check-permission <user> <tenant> <permission>
+//   QEETID_API_KEY=qk_… bun examples/authorization/check-permission/index.ts <user> <tenant> <permission>
 import { QeetID } from "../../../src/index.js";
 
 async function main() {

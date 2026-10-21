@@ -4,7 +4,7 @@
 // verification to see the exact bytes Qeet ID signed.
 //
 //   npm install fastify
-//   QEETID_API_KEY=qk_… QEETID_WEBHOOK_SECRET=whsec_… npx tsx examples/fastify
+//   QEETID_API_KEY=qk_… QEETID_WEBHOOK_SECRET=whsec_… bun examples/fastify/index.ts
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import { ApiError, AuthError, QeetID, constructEvent } from "../../src/index.js";
 

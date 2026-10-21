@@ -8,6 +8,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 The library is unpublished, so these breaking changes ship without a major version (QTID-540).
 
+### Changed
+
+- **Requires Node.js 22 or later** (was 18.17). Node 18 and 20 are end-of-life, and the test
+  toolchain no longer runs on them. The build targets `node22`; CI tests on Node 22, 24 and 26.
+- **Built with bun and Biome.** bun replaces pnpm (`bun.lock`, `packageManager: bun@1.4.3`), and
+  Biome replaces ESLint and Prettier for linting and formatting (`biome.json`). `bun run verify` is
+  the gate: typecheck, Biome check, tests and build. Publishing still uses npm, for provenance. Every
+  dev dependency is on its latest release (vitest 5, tsup 9, @types/node 26). TypeScript is pinned
+  to 6, because tsup's declaration build needs the compiler API that TypeScript 7 no longer ships.
+  `bun audit` reports no vulnerabilities; under pnpm the dev toolchain had 21 high and critical
+  advisories. No runtime dependency was added: the package still has none.
+
 ### Security
 
 - **The token guard checks the audience** (QTID-537). `client.oauth.verify(token, scope)` is
