@@ -109,50 +109,101 @@ describe("OAuthService.tokenExchange", () => {
   });
 });
 
-describe("OAuthService.introspect / revoke — unprefixed-path regression", () => {
-  it("introspect() posts to /oauth/introspect, NOT /v1/oauth/introspect", async () => {
-    const { client, rec } = recordingClient(JSON.stringify({ active: true, sub: "u1", scope: "read" }));
+const appClient = { clientId: "client_1", clientSecret: "secret_1" };
+const appBasic = `Basic ${Buffer.from("client_1:secret_1").toString("base64")}`;
 
-    const result = await client.oauth.introspect("tok_123");
+describe("OAuthService.introspect / revoke — unprefixed path, client-authenticated", () => {
+  it("introspect() posts to /oauth/introspect as the client (HTTP Basic), not /v1/oauth/introspect", async () => {
+    const { client, rec } = recordingClient(JSON.stringify({ active: true, sub: "u1", scope: "read", aud: "https://svc-a" }));
+
+    const result = await client.oauth.introspect("tok_123", appClient);
 
     expect(result.active).toBe(true);
+    expect(result.aud).toBe("https://svc-a");
     expect(rec.method).toBe("POST");
     expect(rec.path).toBe("/oauth/introspect");
-    expect(rec.path).not.toBe("/v1/oauth/introspect");
     expect(rec.body).toBe("token=tok_123");
     expect(rec.headers.get("content-type")).toBe("application/x-www-form-urlencoded");
-    expect(rec.headers.has("authorization")).toBe(false);
+    // The server authenticates the client before anything else; without it
+    // every call was refused, so the guard refused every token.
+    expect(rec.headers.get("authorization")).toBe(appBasic);
   });
 
-  it("revoke() posts to /oauth/revoke, NOT /v1/oauth/revoke", async () => {
+  it("revoke() posts to /oauth/revoke as the client, not /v1/oauth/revoke", async () => {
     const { client, rec } = recordingClient("");
 
-    await client.oauth.revoke("tok_123");
+    await client.oauth.revoke("tok_123", appClient);
 
     expect(rec.method).toBe("POST");
     expect(rec.path).toBe("/oauth/revoke");
-    expect(rec.path).not.toBe("/v1/oauth/revoke");
     expect(rec.body).toBe("token=tok_123");
+    expect(rec.headers.get("authorization")).toBe(appBasic);
   });
 });
 
-describe("OAuthService.verify (MCP token guard)", () => {
-  it("returns the introspection result when the token is active and carries the required scope", async () => {
-    const { client } = recordingClient(JSON.stringify({ active: true, sub: "u1", scope: "read write" }));
-    const result = await client.oauth.verify("tok_123", "write");
-    expect(result.active).toBe(true);
+describe("TokenGuard (MCP / resource-server token guard)", () => {
+  const guardFor = (introspection: object, overrides: Partial<{ audience: string; allowAnyAudience: boolean }> = {}) => {
+    const { client, rec } = recordingClient(JSON.stringify(introspection));
+    return { guard: client.oauth.tokenGuard({ audience: "https://svc-b", ...appClient, ...overrides }), rec };
+  };
+
+  it("refuses to be created without an audience, naming the setting", () => {
+    const { client } = recordingClient("{}");
+    expect(() => client.oauth.tokenGuard({ audience: "", ...appClient })).toThrow(/audience/);
+    // @ts-expect-error — the option is required
+    expect(() => client.oauth.tokenGuard({ ...appClient })).toThrow(/audience/);
   });
 
-  it("throws a 401 ApiError when the token is inactive", async () => {
-    const { client } = recordingClient(JSON.stringify({ active: false }));
-    const err = await client.oauth.verify("tok_123").catch((e: unknown) => e);
+  it("refuses to be created without client credentials", () => {
+    const { client } = recordingClient("{}");
+    expect(() => client.oauth.tokenGuard({ audience: "https://svc-b", clientId: "c", clientSecret: "" })).toThrow(/clientSecret/);
+  });
+
+  it("admits a token issued for its service, introspecting as its client", async () => {
+    const { guard, rec } = guardFor({ active: true, sub: "u1", scope: "mcp:read", aud: "https://svc-b" });
+    const result = await guard.verify("tok_123", "mcp:read");
+    expect(result.sub).toBe("u1");
+    expect(rec.headers.get("authorization")).toBe(appBasic);
+  });
+
+  it("refuses a token issued for another service: 401 invalid_token, audience mismatch", async () => {
+    const { guard } = guardFor({ active: true, scope: "mcp:read", aud: "https://svc-a" });
+    const err = await guard.verify("tok_123", "mcp:read").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toMatchObject({ status: 401, code: "invalid_token", message: "audience mismatch" });
+  });
+
+  it("admits a token whose audience list includes its service, and refuses one whose list doesn't", async () => {
+    await expect(guardFor({ active: true, aud: ["https://svc-a", "https://svc-b"] }).guard.verify("t")).resolves.toMatchObject({
+      active: true,
+    });
+    await expect(guardFor({ active: true, aud: ["https://svc-a", "https://svc-c"] }).guard.verify("t")).rejects.toMatchObject({
+      code: "invalid_token",
+    });
+  });
+
+  it("refuses a token with no audience unless allowAnyAudience is set", async () => {
+    await expect(guardFor({ active: true, scope: "mcp:read" }).guard.verify("t")).rejects.toMatchObject({
+      status: 401,
+      code: "invalid_token",
+    });
+    await expect(guardFor({ active: true, aud: [] }).guard.verify("t")).rejects.toMatchObject({ code: "invalid_token" });
+    await expect(guardFor({ active: true }, { allowAnyAudience: true }).guard.verify("t")).resolves.toMatchObject({ active: true });
+  });
+
+  it("refuses an inactive token: 401 token_inactive", async () => {
+    const err = await guardFor({ active: false })
+      .guard.verify("tok_123")
+      .catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({ status: 401, code: "token_inactive" });
   });
 
-  it("throws a 403 ApiError when the token lacks the required scope", async () => {
-    const { client } = recordingClient(JSON.stringify({ active: true, scope: "read" }));
-    await expect(client.oauth.verify("tok_123", "write")).rejects.toMatchObject({ status: 403, code: "insufficient_scope" });
+  it("still refuses a token for its service that lacks the required scope: 403 insufficient_scope", async () => {
+    await expect(guardFor({ active: true, scope: "mcp:read", aud: "https://svc-b" }).guard.verify("t", "mcp:write")).rejects.toMatchObject({
+      status: 403,
+      code: "insufficient_scope",
+    });
   });
 });
 

@@ -4,6 +4,27 @@ All notable changes to the Qeet ID Node.js SDK are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+The library is unpublished, so these breaking changes ship without a major version (QTID-540).
+
+### Security
+
+- **The token guard checks the audience** (QTID-537). `client.oauth.verify(token, scope)` is
+  replaced by `client.oauth.tokenGuard({ audience, clientId, clientSecret }).verify(token, scope)`.
+  A token whose `aud` (a string or a list) doesn't include the guard's audience is refused with
+  401 `invalid_token` "audience mismatch", as is one with no `aud` unless `allowAnyAudience` is
+  set; creating a guard without an audience throws. A token issued for one service was accepted by
+  every other service using the guard.
+
+### Fixed
+
+- **Introspection and revocation authenticate the client** (QTID-537). `introspect(token, client)`
+  and `revoke(token, client)` now take `{ clientId, clientSecret }` and send them over HTTP Basic.
+  The server authenticates the client first, so both calls were refused every time, and the token
+  guard refused every token. `IntrospectResult` adds `aud`, `client_id`, `iss`, `token_type`,
+  `resource`, `sid` and `act`.
+
 ## [0.1.0] — 2026-07-10
 
 Initial release.
