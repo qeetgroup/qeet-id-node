@@ -235,23 +235,23 @@ Every resource is a property directly on `QeetID` — one property access away, 
 <details open>
 <summary><strong>Administration</strong> — tenant operations</summary>
 
-| Property         | Manages                                                                            |
-| ---------------- | ---------------------------------------------------------------------------------- |
-| `branding`       | Hosted-login branding                                                              |
-| `invitations`    | Org invitations                                                                    |
-| `emailTemplates` | Transactional email templates                                                      |
-| `apiKeys`        | Server-side API keys                                                               |
-| `vault`          | Encrypted secrets store                                                            |
-| `tokenVault`     | Connected third-party OAuth accounts held on behalf of your users                  |
-| `webhooks`       | Webhook subscriptions, deliveries, retries                                         |
-| `auditLogs`      | Hash-chained audit log — read, free-text search, chain `verify`, anomaly detection |
-| `analytics`      | Dashboard KPI overview                                                             |
-| `gdpr`           | Erasure and data-export requests                                                   |
-| `billing`        | Plans, subscription, invoices, checkout                                            |
-| `retention`      | Data-retention policy                                                              |
-| `rateLimits`     | Per-tenant rate-limit overrides                                                    |
-| `logSinks`       | SIEM log forwarding                                                                |
-| `adminLinks`     | Delegated admin-portal links                                                       |
+| Property         | Manages                                                                                                                                |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `branding`       | Hosted-login branding                                                                                                                  |
+| `invitations`    | Org invitations                                                                                                                        |
+| `emailTemplates` | Transactional email templates                                                                                                          |
+| `apiKeys`        | Server-side API keys                                                                                                                   |
+| `vault`          | Encrypted secrets store                                                                                                                |
+| `tokenVault`     | Connected third-party OAuth accounts held on behalf of your users. `getAccessToken` is deprecated: it hands out the raw provider token |
+| `webhooks`       | Webhook subscriptions, deliveries, retries                                                                                             |
+| `auditLogs`      | Hash-chained audit log — read, free-text search, chain `verify`, anomaly detection                                                     |
+| `analytics`      | Dashboard KPI overview                                                                                                                 |
+| `gdpr`           | Erasure and data-export requests                                                                                                       |
+| `billing`        | Plans, subscription, invoices, checkout                                                                                                |
+| `retention`      | Data-retention policy                                                                                                                  |
+| `rateLimits`     | Per-tenant rate-limit overrides                                                                                                        |
+| `logSinks`       | SIEM log forwarding                                                                                                                    |
+| `adminLinks`     | Delegated admin-portal links                                                                                                           |
 
 </details>
 

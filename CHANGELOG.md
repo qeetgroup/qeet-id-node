@@ -17,6 +17,12 @@ The library is unpublished, so these breaking changes ship without a major versi
   set; creating a guard without an audience throws. A token issued for one service was accepted by
   every other service using the guard.
 
+- **The raw vault token is no longer the easy choice** (QTID-538). `tokenVault.getAccessToken()` is
+  `@deprecated` (shown in editors), naming the brokered `tokenVault.call()` that replaces it once the
+  platform offers it (QTID-218), and it emits one `QEETID_RAW_VAULT_TOKEN` `DeprecationWarning` per
+  process. It still works. Removal: the first release after brokered calls ship, the same point as
+  the Go SDK (QTID-246).
+
 ### Fixed
 
 - **Introspection and revocation authenticate the client** (QTID-537). `introspect(token, client)`
