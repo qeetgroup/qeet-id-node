@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { recordingClient } from "../../helpers/mock-transport.js";
+import { ValidationError } from "../../../src/errors/index.js";
 
 /**
  * Regression tests for the five identity resources
@@ -9,22 +10,38 @@ import { recordingClient } from "../../helpers/mock-transport.js";
  * these don't hit a real backend — so each test also checks the decoded
  * result to catch envelope/field-name drift.
  */
-describe("UsersService", () => {
-  it("create() POSTs snake_case fields to /v1/users", async () => {
-    const { client, rec } = recordingClient(
-      '{"id":"u1","tenant_id":"t1","email":"a@b.com","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z"}',
-    );
+// A user exactly as GET /v1/users/{id} returns it (qeet-id-server
+// internal/identity/users/domain.go User, api/openapi/management.yaml).
+const serverUser = {
+  id: "u1",
+  tenant_id: "t1",
+  email: "ana@example.com",
+  email_verified_at: null,
+  phone: null,
+  phone_verified_at: null,
+  display_name: "Ana",
+  avatar_url: null,
+  status: "active",
+  metadata: {},
+  created_at: "2026-10-21T00:00:00Z",
+  updated_at: "2026-10-21T00:00:00Z",
+};
 
-    const user = await client.users.create({ tenant_id: "t1", email: "a@b.com" });
+describe("UsersService", () => {
+  it("create() sends display_name (the API's field, not name) and reads it back", async () => {
+    const { client, rec } = recordingClient(JSON.stringify(serverUser));
+
+    const user = await client.users.create({ tenant_id: "t1", email: "ana@example.com", display_name: "Ana" });
 
     expect(rec.method).toBe("POST");
     expect(rec.path).toBe("/v1/users");
-    expect(JSON.parse(rec.body)).toStrictEqual({ tenant_id: "t1", email: "a@b.com" });
-    expect(user).toMatchObject({ id: "u1", tenant_id: "t1", email: "a@b.com" });
+    expect(JSON.parse(rec.body)).toStrictEqual({ tenant_id: "t1", email: "ana@example.com", display_name: "Ana" });
+    expect(user.display_name).toBe("Ana");
+    expect(user.status).toBe("active");
   });
 
   it("get() percent-encodes an id containing '/' and a space", async () => {
-    const { client, rec } = recordingClient('{"id":"usr abc/123","tenant_id":"t1","created_at":"x","updated_at":"y"}');
+    const { client, rec } = recordingClient(JSON.stringify({ ...serverUser, id: "usr abc/123" }));
 
     await client.users.get("usr abc/123");
 
@@ -32,14 +49,38 @@ describe("UsersService", () => {
     expect(rec.path).toBe("/v1/users/usr%20abc%2F123");
   });
 
-  it("update() PATCHes the per-user path", async () => {
-    const { client, rec } = recordingClient('{"id":"u1","tenant_id":"t1","created_at":"x","updated_at":"y"}');
+  it("update() PATCHes only fields the API accepts on update (no email)", async () => {
+    const { client, rec } = recordingClient(JSON.stringify({ ...serverUser, display_name: "New Name" }));
 
-    await client.users.update("u1", { name: "New Name" });
+    const user = await client.users.update("u1", { display_name: "New Name", phone: "+14155550100" });
 
     expect(rec.method).toBe("PATCH");
     expect(rec.path).toBe("/v1/users/u1");
-    expect(JSON.parse(rec.body)).toStrictEqual({ name: "New Name" });
+    expect(JSON.parse(rec.body)).toStrictEqual({ display_name: "New Name", phone: "+14155550100" });
+    expect(user.display_name).toBe("New Name");
+    // @ts-expect-error — the API refuses email on update; it is the user's email-change flow
+    void (() => client.users.update("u1", { email: "x@example.com" }));
+  });
+
+  it("suspend() PATCHes status suspended and reads the suspended status back", async () => {
+    const { client, rec } = recordingClient(JSON.stringify({ ...serverUser, status: "suspended" }));
+
+    const user = await client.users.suspend("u1");
+
+    expect(rec.method).toBe("PATCH");
+    expect(rec.path).toBe("/v1/users/u1");
+    expect(JSON.parse(rec.body)).toStrictEqual({ status: "suspended" });
+    expect(user.status).toBe("suspended");
+  });
+
+  it("reactivate() POSTs to /v1/users/{id}/reactivate", async () => {
+    const { client, rec } = recordingClient(JSON.stringify(serverUser));
+
+    const user = await client.users.reactivate("u1");
+
+    expect(rec.method).toBe("POST");
+    expect(rec.path).toBe("/v1/users/u1/reactivate");
+    expect(user.status).toBe("active");
   });
 
   it("delete() DELETEs the per-user path", async () => {
@@ -51,33 +92,84 @@ describe("UsersService", () => {
     expect(rec.path).toBe("/v1/users/u1");
   });
 
-  it("list() forwards tenant/limit/cursor as query params and decodes the {items, next_cursor} envelope into UserPage", async () => {
-    const { client, rec } = recordingClient(
-      '{"items":[{"id":"u1","tenant_id":"t1","created_at":"x","updated_at":"y"}],"next_cursor":"n2"}',
-    );
+  it("list() sends limit/cursor only and decodes the {items, next_cursor} envelope", async () => {
+    const { client, rec } = recordingClient(JSON.stringify({ items: [serverUser], next_cursor: "n2" }));
 
-    const page = await client.users.list({ tenant: "t1", limit: 5, cursor: "abc" });
+    const page = await client.users.list({ limit: 5, cursor: "abc" });
 
     expect(rec.method).toBe("GET");
     expect(rec.path).toBe("/v1/users");
     const q = new URLSearchParams(rec.query);
-    expect(q.get("tenant")).toBe("t1");
+    expect(q.has("tenant")).toBe(false);
     expect(q.get("limit")).toBe("5");
     expect(q.get("cursor")).toBe("abc");
-    expect(page).toStrictEqual({ data: [{ id: "u1", tenant_id: "t1", created_at: "x", updated_at: "y" }], nextCursor: "n2" });
+    expect(page.nextCursor).toBe("n2");
+    expect(page.data[0]).toMatchObject({ display_name: "Ana", status: "active" });
+  });
+
+  it("list() and all() refuse an organisation parameter instead of silently listing the credential's own", async () => {
+    const { client, rec } = recordingClient(JSON.stringify({ items: [] }));
+
+    // @ts-expect-error — not expressible in the types either
+    await expect(client.users.list({ tenant: "other-org" })).rejects.toThrow(ValidationError);
+    // @ts-expect-error — not expressible in the types either
+    expect(() => client.users.all({ tenant_id: "other-org" })).toThrow(ValidationError);
+    expect(rec.method).toBe("");
   });
 
   it("all() yields the single page's items and stops when next_cursor is absent", async () => {
-    const { client } = recordingClient(
-      '{"items":[{"id":"u1","tenant_id":"t1","created_at":"x","updated_at":"y"},{"id":"u2","tenant_id":"t1","created_at":"x","updated_at":"y"}]}',
-    );
+    const { client } = recordingClient(JSON.stringify({ items: [serverUser, { ...serverUser, id: "u2" }] }));
 
     const seen: string[] = [];
-    for await (const user of client.users.all({ tenant: "t1" })) {
+    for await (const user of client.users.all()) {
       seen.push(user.id);
     }
 
     expect(seen).toEqual(["u1", "u2"]);
+  });
+
+  it("bulkCreate() reads succeeded/failed and the failed rows' line numbers", async () => {
+    const { client, rec } = recordingClient(
+      JSON.stringify({
+        succeeded: 3,
+        failed: 2,
+        errors: [
+          { line: 2, email: "dup@example.com", message: "email exists" },
+          { line: 5, email: "bad", message: "invalid email" },
+        ],
+      }),
+    );
+
+    const result = await client.users.bulkCreate({
+      users: [{ email: "a@example.com", display_name: "A" }, { email: "dup@example.com" }],
+    });
+
+    expect(rec.path).toBe("/v1/users/bulk");
+    expect(JSON.parse(rec.body).users[0]).toStrictEqual({ email: "a@example.com", display_name: "A" });
+    expect(result.succeeded).toBe(3);
+    expect(result.failed).toBe(2);
+    expect(result.errors?.map((e) => e.line)).toEqual([2, 5]);
+  });
+
+  it("listDeleted() reads the recycle-bin shape", async () => {
+    const { client } = recordingClient(
+      JSON.stringify({
+        items: [{ id: "u9", email: "gone@example.com", display_name: null, deleted_at: "x", deleted_by: "admin1", created_at: "y" }],
+      }),
+    );
+
+    const deleted = await client.users.listDeleted();
+
+    expect(deleted[0]).toMatchObject({ id: "u9", deleted_by: "admin1" });
+  });
+
+  it("verifyEmailStart() sends no address override (the server verifies the address on file)", async () => {
+    const { client, rec } = recordingClient(JSON.stringify({ message: "sent" }));
+
+    await client.users.verifyEmailStart("u1");
+
+    expect(rec.path).toBe("/v1/users/u1/verify/email/start");
+    expect(JSON.parse(rec.body)).toStrictEqual({});
   });
 });
 

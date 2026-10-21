@@ -25,6 +25,16 @@ The library is unpublished, so these breaking changes ship without a major versi
 
 ### Fixed
 
+- **Users match the API** (QTID-530). `User` has `display_name` (not `name`), `status`
+  (`active` · `invited` · `suspended` · `deleted`), `avatar_url` and `metadata`, and no
+  `disabled_at`; list results add `roles`, `mfa_enabled`, `groups_count` and `last_seen_*`.
+  `CreateUserInput` takes `display_name` and `metadata`; `UpdateUserInput` takes `display_name`,
+  `avatar_url`, `phone`, `status` and `metadata` and no longer `email`, which the API refuses on
+  update. New `suspend(id)` and `reactivate(id)`. `list()`/`all()` take only `limit`/`cursor`, and
+  throw a `ValidationError` when given an organisation (the API lists the credential's own and
+  ignored it). Bulk results are `succeeded`/`failed` with each failed row's `line`. `listDeleted()`
+  returns the recycle-bin shape (`DeletedUser`). `verifyEmailStart(id)` has no address override,
+  which the server ignores by design.
 - **Introspection and revocation authenticate the client** (QTID-537). `introspect(token, client)`
   and `revoke(token, client)` now take `{ clientId, clientSecret }` and send them over HTTP Basic.
   The server authenticates the client first, so both calls were refused every time, and the token

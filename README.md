@@ -93,7 +93,7 @@ async function main() {
   const user = await client.users.create({
     tenant_id: process.env.QEETID_TENANT_ID!,
     email: "ada@example.com",
-    name: "Ada Lovelace",
+    display_name: "Ada Lovelace",
   });
   console.log("created", user.id);
 }
@@ -349,7 +349,8 @@ const decision = await client.decisions.evaluate(tenantId, {
 Every listable resource has an `all(...)` async generator that walks pages lazily. Break out of the loop and paging stops immediately — no wasted requests for collections you only need the first few items from.
 
 ```ts
-for await (const user of client.users.all({ tenant: tenantId })) {
+for await (const user of client.users.all()) {
+  // the credential's own organisation
   console.log(user.email);
 }
 ```

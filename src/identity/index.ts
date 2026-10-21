@@ -1,13 +1,17 @@
 export { UsersService } from "./users.js";
 export type {
   User,
+  UserStatus,
+  DeletedUser,
   CreateUserInput,
   UpdateUserInput,
+  UserListParams,
   UserPage,
   BulkImportSource,
+  BulkUserInput,
   BulkCreateInput,
+  BulkImportError,
   BulkImportResult,
-  VerifyEmailStartInput,
   VerifyEmailConfirmInput,
   VerifyPhoneStartInput,
   VerifyPhoneConfirmInput,
