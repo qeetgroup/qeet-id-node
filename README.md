@@ -1,6 +1,6 @@
 # qeet-id-node
 
-[![Node Version](https://img.shields.io/badge/node-18.17%2B-339933?logo=node.js)](package.json)
+[![Node Version](https://img.shields.io/badge/node-22%2B-339933?logo=node.js)](package.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 The official server-side Node.js/TypeScript SDK for [Qeet ID](https://qeet.in) — the passkeys-first identity platform. One client, ~90 typed methods across users, organizations, roles, federation (OIDC/SAML/SCIM/LDAP), fine-grained authorization (RBAC/ReBAC/AuthZEN), AI-agent identities, compliance, and billing — with local JWT verification, automatic retries, auto-pagination, and webhook signature verification built in, on zero third-party dependencies.
@@ -63,14 +63,14 @@ A quick glossary before the code, for anyone new to identity platforms — skip 
 
 ## Requirements
 
-- **Node.js 18.17+** (global `fetch` and `node:crypto`'s `webcrypto` — no third-party HTTP or JWT library).
+- **Node.js 22+** (global `fetch` and `node:crypto`'s `webcrypto` — no third-party HTTP or JWT library).
 - A Qeet ID account and a server-side API key (`qk_…`) — see [qeet.in](https://qeet.in) to create one.
 
 ## Installation
 
 ```bash
 npm install @qeet-id/node
-# or: pnpm add @qeet-id/node / yarn add @qeet-id/node
+# or: bun add @qeet-id/node / pnpm add @qeet-id/node / yarn add @qeet-id/node
 ```
 
 ```ts
@@ -514,7 +514,7 @@ Runnable examples live in [`examples/`](./examples), grouped the same way as the
 
 This SDK follows [Semantic Versioning](https://semver.org/). It is currently **pre-1.0** — minor versions may include breaking changes, documented in [CHANGELOG.md](./CHANGELOG.md). Once a resource's request/response shape stabilizes against the live backend, breaking it is treated as a real cost, not a free rename.
 
-Supported Node.js versions: 18.17+ through current, matching the CI matrix in [.github/workflows/ci.yml](.github/workflows/ci.yml).
+Supported Node.js versions: 22+ through current, matching the CI matrix in [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ## Contributing
 

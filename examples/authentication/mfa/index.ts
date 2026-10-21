@@ -2,7 +2,7 @@
 // loses their authenticator device. The backend has no endpoint to list a
 // user's factors as an admin, only this reset.
 //
-//   QEETID_API_KEY=qk_… npx tsx examples/authentication/mfa <user-id>
+//   QEETID_API_KEY=qk_… bun examples/authentication/mfa/index.ts <user-id>
 import { QeetID } from "../../../src/index.js";
 
 async function main() {

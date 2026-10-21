@@ -6,8 +6,8 @@ here and add nothing architectural.
 
 ## What this repository is
 
-The **official server-side Node/TypeScript SDK for Qeet ID** — `@qeet-id/node` v0.1.0. Node ≥18.17,
-pnpm, **zero runtime dependencies**, built by `tsup` into dual ESM/CJS with type declarations.
+The **official server-side Node/TypeScript SDK for Qeet ID** — `@qeet-id/node` v0.1.0. Node ≥22,
+bun and Biome, **zero runtime dependencies**, built by `tsup` into dual ESM/CJS with type declarations.
 
 It is a **client of a contract it does not own.** The contract lives in `qeet-id-server`. This SDK
 wraps it and never adds behaviour the API lacks.
@@ -75,28 +75,28 @@ Use them; there is no mock server.
 ## Commands
 
 ```bash
-pnpm install
-pnpm check          # typecheck + lint + test — THE gate, run this before pushing
-pnpm build          # tsup, dual ESM/CJS
-pnpm test           # vitest run
-pnpm typecheck
-pnpm lint           # eslint
-pnpm format         # prettier --write
+bun install
+bun run verify      # typecheck + biome check + test + build — THE gate, run this before pushing
+bun run build          # tsup, dual ESM/CJS
+bun run test           # vitest run
+bun run typecheck
+bun run lint        # biome lint
+bun run format      # biome format --write
 ```
 
-Also `pnpm dev` (tsup --watch), `pnpm test:watch`, `pnpm test:coverage`, `pnpm lint:fix`.
+Also `bun run dev` (tsup --watch), `bun run test:watch`, `bun run test:coverage`, `bun run lint:fix`, and `bun run check` (Biome lint + format check).
 
 ## What CI enforces
 
-`ci.yml` on Node 18.17/20/22/24: install, `typecheck`, `build`, `test:coverage`.
-**`ci.yml` does not run lint** — `lint.yml` runs `pnpm lint` plus a prettier `--check`.
-`security.yml`: `pnpm audit --audit-level=high` + gitleaks. `codeql.yml`: JS/TS, no autobuild.
-`release.yml`: on tag `v*` — install, typecheck, lint, test, build, `pnpm publish --access public`.
+`ci.yml` on Node 22/24/26 (bun installs, Node runs the tests): install, `typecheck`, `build`, `test:coverage`.
+**`ci.yml` does not run lint** — `lint.yml` runs `bun run check` (Biome: lint and formatting).
+`security.yml`: `bun audit --audit-level=high` + gitleaks. `codeql.yml`: JS/TS, no autobuild.
+`release.yml`: on push to `main` — install, typecheck, check, test, build, `npm publish --access public --provenance`.
 
 ## Before you finish
 
 ```bash
-pnpm check
+bun run verify
 git diff
 ```
 

@@ -39,7 +39,7 @@ Read them when a task needs organization or product understanding; this reposito
 ## Finishing a change
 
 ```bash
-pnpm check
+bun run verify
 git diff
 ```
 

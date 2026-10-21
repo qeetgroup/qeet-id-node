@@ -73,7 +73,7 @@ Also `docs/architecture/ARCHITECTURE.md`, `docs/FUTURE.md`.
 |                    |                                                           |
 | ------------------ | --------------------------------------------------------- |
 | Scripts            | `package.json`                                            |
-| Build config       | `tsup.config.ts` — dual ESM/CJS, dts, target node18       |
+| Build config       | `tsup.config.ts` — dual ESM/CJS, dts, target node22       |
 | Tests              | `test/` — 11 files, vitest, `environment: "node"`         |
 | **Mock transport** | `test/helpers/mock-transport.ts`                          |
 | CI                 | `.github/workflows/{ci,lint,security,codeql,release}.yml` |

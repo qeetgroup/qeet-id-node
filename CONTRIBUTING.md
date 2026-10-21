@@ -5,11 +5,11 @@
 ```bash
 git clone https://github.com/qeetgroup/qeet-id-node
 cd qeet-id-node
-pnpm install
-pnpm check   # typecheck + lint + test
+bun install
+bun run verify   # typecheck + biome check + test + build
 ```
 
-Requires Node.js 18.17+ (global `fetch`/`webcrypto`) — see `.nvmrc` for the
+Requires Node.js 22+ (global `fetch`/`webcrypto`) and bun — see `.nvmrc` for the
 version this repo is developed against.
 
 ## Conventions
@@ -50,8 +50,8 @@ method/path/body shape against a mocked `fetch`, using the shared helper in
 `test/helpers/`. Run:
 
 ```bash
-pnpm test          # vitest run
-pnpm test:coverage
+bun run test          # vitest run
+bun run test:coverage
 ```
 
 ## Adding a new resource

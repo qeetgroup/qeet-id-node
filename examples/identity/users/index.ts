@@ -1,7 +1,7 @@
 // Auto-paginates every user of the API key's organisation using the `all`
 // async generator (the organisation always comes from the credential).
 //
-//   QEETID_API_KEY=qk_… npx tsx examples/identity/users
+//   QEETID_API_KEY=qk_… bun examples/identity/users/index.ts
 import { QeetID } from "../../../src/index.js";
 
 async function main() {

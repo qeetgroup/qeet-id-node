@@ -5,7 +5,7 @@ architecture.
 
 ## Repository
 
-The server-side **Node/TypeScript SDK for Qeet ID** — `@qeet-id/node`. Node ≥18.17, pnpm, **zero runtime dependencies**, dual ESM/CJS via tsup. It wraps a contract owned by `qeet-id-server`.
+The server-side **Node/TypeScript SDK for Qeet ID** — `@qeet-id/node`. Node ≥22, bun, Biome, **zero runtime dependencies**, dual ESM/CJS via tsup. It wraps a contract owned by `qeet-id-server`.
 
 Context: **L0** `qeet-context` (organization) → **L1** `qeet-id-context` (product) → **L2** this
 repository → source.
@@ -25,7 +25,7 @@ Resources live in category folders `src/{identity,authentication,authorization,a
 
 ## Commands
 
-`pnpm install` · `pnpm check` · `pnpm build` · `pnpm test` · `pnpm typecheck` · `pnpm lint`
+`bun install` · `bun run verify` · `bun run build` · `bun run test` · `bun run typecheck` · `bun run check`
 
 ## Do not
 

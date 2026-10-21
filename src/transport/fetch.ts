@@ -5,7 +5,7 @@ export type QueryParams = Record<string, string | number | boolean | undefined |
 
 /** Joins `baseUrl` + `path`, appending `query` as a URL-encoded query string. */
 export function buildUrl(baseUrl: string, path: string, query?: QueryParams): string {
-  const url = new URL(path, baseUrl + "/");
+  const url = new URL(path, `${baseUrl}/`);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined && value !== null) url.searchParams.set(key, String(value));

@@ -1,7 +1,7 @@
 // Grants a ReBAC relationship and then expands the identity graph rooted at
 // it — the same data the console's Identity Graph visualization renders.
 //
-//   QEETID_API_KEY=qk_… npx tsx examples/authorization/relation-tuples <tenant-id>
+//   QEETID_API_KEY=qk_… bun examples/authorization/relation-tuples/index.ts <tenant-id>
 import { QeetID } from "../../../src/index.js";
 
 async function main() {
