@@ -26,11 +26,46 @@ export interface IntrospectResult {
   active: boolean;
   sub?: string;
   scope?: string;
+  /** The audience the token was issued for: one string, or a list for several. */
+  aud?: string | string[];
+  client_id?: string;
+  iss?: string;
+  token_type?: string;
+  /** The RFC 8707 resource(s) the token was issued for, when it names one. */
+  resource?: string | string[];
   exp?: number;
   iat?: number;
   tenant_id?: string;
+  sid?: string;
   actor_type?: string;
   agent_id?: string;
+  act?: { sub: string };
+}
+
+/**
+ * The OAuth client that calls introspection or revocation. Both endpoints
+ * authenticate the client first (a confidential application; a public
+ * client's id proves nothing), and introspection answers only about tokens
+ * issued to it or for a resource it serves.
+ */
+export interface ClientCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
+/** Configures {@link TokenGuard}. */
+export interface TokenGuardOptions extends ClientCredentials {
+  /**
+   * The protected service's identifier, as the token's `aud` must name it:
+   * the RFC 8707 resource registered for it (or the platform audience).
+   * Required: without it a token issued for any other service would pass.
+   */
+  audience: string;
+  /**
+   * Accept a token whose introspection reports no `aud` at all. **Risky:**
+   * such a token isn't shown to be for this service. Default `false`.
+   */
+  allowAnyAudience?: boolean;
 }
 
 /** The RFC 8628 device-flow starting point. */
@@ -206,36 +241,40 @@ export class OAuthService {
   }
 
   /**
-   * Implements RFC 7662 token introspection. Note the unprefixed path —
-   * `/oauth/introspect`, not `/v1/oauth/introspect` (confirmed against the
-   * spec and the router's CSRF-exempt path list; the previous SDK version
-   * had this wrong and would 404).
+   * Implements RFC 7662 token introspection, authenticated as `client` over
+   * HTTP Basic (the endpoint refuses an unauthenticated call). Note the
+   * unprefixed path: `/oauth/introspect`, not `/v1/oauth/introspect`.
    */
-  introspect(token: string, opts?: RequestOpts): Promise<IntrospectResult> {
-    return this.t.doForm<IntrospectResult>("POST", "/oauth/introspect", new URLSearchParams({ token }), undefined, opts?.signal);
+  introspect(token: string, client: ClientCredentials, opts?: RequestOpts): Promise<IntrospectResult> {
+    return this.t.doForm<IntrospectResult>(
+      "POST",
+      "/oauth/introspect",
+      new URLSearchParams({ token }),
+      { username: client.clientId, password: client.clientSecret },
+      opts?.signal,
+    );
   }
 
-  /** Implements RFC 7009 token revocation. Same unprefixed-path fix as `introspect`. */
-  revoke(token: string, opts?: RequestOpts): Promise<void> {
-    return this.t.doForm<void>("POST", "/oauth/revoke", new URLSearchParams({ token }), undefined, opts?.signal);
+  /** Implements RFC 7009 token revocation, authenticated as `client`. Unprefixed path, like `introspect`. */
+  revoke(token: string, client: ClientCredentials, opts?: RequestOpts): Promise<void> {
+    return this.t.doForm<void>(
+      "POST",
+      "/oauth/revoke",
+      new URLSearchParams({ token }),
+      { username: client.clientId, password: client.clientSecret },
+      opts?.signal,
+    );
   }
 
   /**
-   * An MCP token guard: introspects the token and throws if it is inactive
-   * or does not carry `requiredScope` (omit to skip the scope check).
+   * Creates a token guard for one protected service (an MCP server or any
+   * resource server): it introspects each token as `options`' client and
+   * admits it only when it is active, issued for `options.audience`, and
+   * carries the scope a call needs. Throws at once when the audience or the
+   * client credentials are missing.
    */
-  async verify(token: string, requiredScope?: string, opts?: RequestOpts): Promise<IntrospectResult> {
-    const result = await this.introspect(token, opts);
-    if (!result.active) {
-      throw new ApiError({ status: 401, code: "token_inactive", message: "token is not active" });
-    }
-    if (requiredScope) {
-      const scopes = (result.scope ?? "").split(/\s+/).filter(Boolean);
-      if (!scopes.includes(requiredScope)) {
-        throw new ApiError({ status: 403, code: "insufficient_scope", message: `required scope: ${requiredScope}` });
-      }
-    }
-    return result;
+  tokenGuard(options: TokenGuardOptions): TokenGuard {
+    return new TokenGuard(this, options);
   }
 
   /** Starts an RFC 8628 device-flow grant. */
@@ -285,4 +324,64 @@ export class OAuthService {
   backchannelDecision(id: string, approve: boolean, opts?: RequestOpts): Promise<void> {
     return this.t.post("/v1/oauth/bc-authorize/decision", { id, approve }, opts);
   }
+}
+
+/**
+ * Guards one protected service: {@link verify} introspects a token and
+ * throws unless it is active, issued for the guard's audience (its `aud`, a
+ * string or a list, includes it) and carries the required scope. Create it
+ * with `client.oauth.tokenGuard({ audience, clientId, clientSecret })`.
+ */
+export class TokenGuard {
+  private readonly audience: string;
+  private readonly allowAnyAudience: boolean;
+  private readonly client: ClientCredentials;
+
+  constructor(
+    private readonly oauth: OAuthService,
+    options: TokenGuardOptions,
+  ) {
+    if (!options?.audience?.trim()) {
+      throw new TypeError(
+        "TokenGuard: `audience` is required (the protected service's identifier, as tokens issued for it name it in `aud`)",
+      );
+    }
+    if (!options.clientId || !options.clientSecret) {
+      throw new TypeError("TokenGuard: `clientId` and `clientSecret` are required (introspection authenticates the client)");
+    }
+    this.audience = options.audience;
+    this.allowAnyAudience = options.allowAnyAudience === true;
+    this.client = { clientId: options.clientId, clientSecret: options.clientSecret };
+  }
+
+  /**
+   * Admits `token` or throws an {@link ApiError}: 401 `token_inactive` when it
+   * isn't active, 401 `invalid_token` ("audience mismatch") when it wasn't
+   * issued for this service, 403 `insufficient_scope` when it lacks
+   * `requiredScope` (omit to skip the scope check).
+   */
+  async verify(token: string, requiredScope?: string, opts?: RequestOpts): Promise<IntrospectResult> {
+    const result = await this.oauth.introspect(token, this.client, opts);
+    if (!result.active) {
+      throw new ApiError({ status: 401, code: "token_inactive", message: "token is not active" });
+    }
+    if (!audienceIncludes(result.aud, this.audience, this.allowAnyAudience)) {
+      throw new ApiError({ status: 401, code: "invalid_token", message: "audience mismatch" });
+    }
+    if (requiredScope) {
+      const scopes = (result.scope ?? "").split(/\s+/).filter(Boolean);
+      if (!scopes.includes(requiredScope)) {
+        throw new ApiError({ status: 403, code: "insufficient_scope", message: `required scope: ${requiredScope}` });
+      }
+    }
+    return result;
+  }
+}
+
+/** Whether `aud` (a string or a list) names `audience`; a missing `aud` passes only when allowed. */
+function audienceIncludes(aud: string | string[] | undefined, audience: string, allowMissing: boolean): boolean {
+  if (aud === undefined || aud === null || (Array.isArray(aud) && aud.length === 0) || aud === "") {
+    return allowMissing;
+  }
+  return Array.isArray(aud) ? aud.includes(audience) : aud === audience;
 }

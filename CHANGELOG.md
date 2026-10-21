@@ -4,6 +4,65 @@ All notable changes to the Qeet ID Node.js SDK are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+The library is unpublished, so these breaking changes ship without a major version (QTID-540).
+
+### Changed
+
+- **Requires Node.js 22 or later** (was 18.17). Node 18 and 20 are end-of-life, and the test
+  toolchain no longer runs on them. The build targets `node22`; CI tests on Node 22, 24 and 26.
+- **Built with bun and Biome.** bun replaces pnpm (`bun.lock`, `packageManager: bun@1.4.3`), and
+  Biome replaces ESLint and Prettier for linting and formatting (`biome.json`). `bun run verify` is
+  the gate: typecheck, Biome check, tests and build. Publishing still uses npm, for provenance. Every
+  dev dependency is on its latest release (vitest 5, tsup 9, @types/node 26). TypeScript is pinned
+  to 6, because tsup's declaration build needs the compiler API that TypeScript 7 no longer ships.
+  `bun audit` reports no vulnerabilities; under pnpm the dev toolchain had 21 high and critical
+  advisories. No runtime dependency was added: the package still has none.
+
+### Security
+
+- **The token guard checks the audience** (QTID-537). `client.oauth.verify(token, scope)` is
+  replaced by `client.oauth.tokenGuard({ audience, clientId, clientSecret }).verify(token, scope)`.
+  A token whose `aud` (a string or a list) doesn't include the guard's audience is refused with
+  401 `invalid_token` "audience mismatch", as is one with no `aud` unless `allowAnyAudience` is
+  set; creating a guard without an audience throws. A token issued for one service was accepted by
+  every other service using the guard.
+
+- **The raw vault token is no longer the easy choice** (QTID-538). `tokenVault.getAccessToken()` is
+  `@deprecated` (shown in editors), naming the brokered `tokenVault.call()` that replaces it once the
+  platform offers it (QTID-218), and it emits one `QEETID_RAW_VAULT_TOKEN` `DeprecationWarning` per
+  process. It still works. Removal: the first release after brokered calls ship, the same point as
+  the Go SDK (QTID-246).
+
+### Fixed
+
+- **Users match the API** (QTID-530). `User` has `display_name` (not `name`), `status`
+  (`active` · `invited` · `suspended` · `deleted`), `avatar_url` and `metadata`, and no
+  `disabled_at`; list results add `roles`, `mfa_enabled`, `groups_count` and `last_seen_*`.
+  `CreateUserInput` takes `display_name` and `metadata`; `UpdateUserInput` takes `display_name`,
+  `avatar_url`, `phone`, `status` and `metadata` and no longer `email`, which the API refuses on
+  update. New `suspend(id)` and `reactivate(id)`. `list()`/`all()` take only `limit`/`cursor`, and
+  throw a `ValidationError` when given an organisation (the API lists the credential's own and
+  ignored it). Bulk results are `succeeded`/`failed` with each failed row's `line`. `listDeleted()`
+  returns the recycle-bin shape (`DeletedUser`). `verifyEmailStart(id)` has no address override,
+  which the server ignores by design.
+- **Application and agent calls match the API** (QTID-536). `oidc.create()` returns the server's
+  `{ client, client_secret?, warning? }` (it was read as the application, so every field was empty
+  and the one-time secret was lost). `OIDCClient` and its inputs use the API's `type` and
+  `post_logout_uris` plus `pkce_exempt_until` and the logout URIs; `token_endpoint_auth_method` is
+  gone (the API refuses it). `rotateSecret()` returns `{ client_secret, warning }`.
+  `ShadowAIClient` has `id`, `grant_types`, `live_grants` and `created_at`. `Agent` adds `status`
+  and `sponsor_user_id` and has no `tenant_id`; `agents.create()` requires `sponsor_user_id` (the
+  server refuses an agent without one); `agents.update()` resolves to nothing (204);
+  `agents.token(agentId, secret)` sends only those two (the server refused `tenant_id` and
+  `scope`).
+- **Introspection and revocation authenticate the client** (QTID-537). `introspect(token, client)`
+  and `revoke(token, client)` now take `{ clientId, clientSecret }` and send them over HTTP Basic.
+  The server authenticates the client first, so both calls were refused every time, and the token
+  guard refused every token. `IntrospectResult` adds `aud`, `client_id`, `iss`, `token_type`,
+  `resource`, `sid` and `act`.
+
 ## [0.1.0] — 2026-07-10
 
 Initial release.

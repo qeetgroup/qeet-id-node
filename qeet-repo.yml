@@ -20,10 +20,11 @@ repository:
 
 runtime:
   language: TypeScript
-  node: ">=18.17"            # .nvmrc pins 24
-  package_manager: pnpm@10.32.1
+  node: ">=22"               # .nvmrc pins 24
+  package_manager: bun@1.4.3
+  lint_format: biome
   runtime_deps: none         # zero runtime dependencies; devDeps only
-  build: tsup                # dual ESM/CJS, dts, target node18
+  build: tsup                # dual ESM/CJS, dts, target node22
 
 module: {name: "@qeet-id/node", version: "0.1.0"}
 
@@ -49,16 +50,16 @@ defaults:
   retry_policy: 429 always; 5xx only when idempotent (GET/DELETE)
 
 commands:
-  install: pnpm install
-  check:   pnpm check        # typecheck + lint + test — the gate
-  build:   pnpm build
-  test:    pnpm test
+  install: bun install
+  check:   bun run verify    # typecheck + biome check + test + build — the gate
+  build:   bun run build
+  test:    bun run test
 
 ci:
   workflows: [ci.yml, codeql.yml, lint.yml, release.yml, security.yml]
-  matrix: ["18.17", "20", "22", "24"]
+  matrix: ["22", "24", "26"]
   note: ci.yml does NOT run lint — lint lives only in lint.yml
-  release: push main -> bump package.json -> gate -> pnpm publish --access public --provenance -> tag vX.Y.Z
+  release: push main -> bump package.json -> gate -> npm publish --access public --provenance -> tag vX.Y.Z
 
 security:
   sensitive_paths:

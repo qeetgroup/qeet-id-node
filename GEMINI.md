@@ -9,20 +9,20 @@ GEMINI.md  →  AGENTS.md  →  docs/llm/*
 
 ## Canonical context
 
-| File | For |
-|---|---|
-| [qeet-repo.yml](qeet-repo.yml) | Machine-readable repository identity |
-| [AGENTS.md](AGENTS.md) | **Rules, commands, what CI enforces** |
-| [docs/llm/context.md](docs/llm/context.md) | How this repository actually works |
-| [docs/llm/boundaries.md](docs/llm/boundaries.md) | What it owns, and what it must not touch |
-| [docs/llm/workflows.md](docs/llm/workflows.md) | Step-by-step for common changes |
-| [docs/llm/architecture-map.md](docs/llm/architecture-map.md) | "Where is X?" — fastest path to a file |
+| File                                                         | For                                      |
+| ------------------------------------------------------------ | ---------------------------------------- |
+| [qeet-repo.yml](qeet-repo.yml)                               | Machine-readable repository identity     |
+| [AGENTS.md](AGENTS.md)                                       | **Rules, commands, what CI enforces**    |
+| [docs/llm/context.md](docs/llm/context.md)                   | How this repository actually works       |
+| [docs/llm/boundaries.md](docs/llm/boundaries.md)             | What it owns, and what it must not touch |
+| [docs/llm/workflows.md](docs/llm/workflows.md)               | Step-by-step for common changes          |
+| [docs/llm/architecture-map.md](docs/llm/architecture-map.md) | "Where is X?" — fastest path to a file   |
 
 Parent context: **L0** `qeetgroup/qeet-context` · **L1** `qeetgroup/qeet-id-context`.
 
 ## What this repository is
 
-The server-side **Node/TypeScript SDK for Qeet ID** — `@qeet-id/node`. Node ≥18.17, pnpm, **zero runtime dependencies**, dual ESM/CJS via tsup. It wraps a contract owned by `qeet-id-server`.
+The server-side **Node/TypeScript SDK for Qeet ID** — `@qeet-id/node`. Node ≥22, bun, Biome, **zero runtime dependencies**, dual ESM/CJS via tsup. It wraps a contract owned by `qeet-id-server`.
 
 ## Non-negotiables
 
@@ -35,13 +35,13 @@ The server-side **Node/TypeScript SDK for Qeet ID** — `@qeet-id/node`. Node �
 
 ## Commands
 
-`pnpm install` · `pnpm check` · `pnpm build` · `pnpm test` · `pnpm typecheck` · `pnpm lint`
+`bun install` · `bun run verify` · `bun run build` · `bun run test` · `bun run typecheck` · `bun run check`
 
 That list is complete — **do not invent commands.**
 
 ## Before finishing
 
 ```bash
-pnpm check
+bun run verify
 git diff
 ```

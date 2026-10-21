@@ -6,8 +6,8 @@
 ## Set up
 
 ```bash
-pnpm install
-pnpm check      # typecheck + lint + test
+bun install
+bun run verify   # typecheck + biome check + test + build
 ```
 
 No services required — tests stub `fetch`. There is no `.env`.
@@ -22,7 +22,7 @@ No services required — tests stub `fetch`. There is no `.env`.
 5  wire fields snake_case   do NOT camelCase them (ADR-0004)
 6  test                     test/helpers/mock-transport.ts — recordingClient / scriptedClient
 7  README table row
-8  pnpm check
+8  bun run verify
 ```
 
 ## Add a whole resource
@@ -35,7 +35,7 @@ No services required — tests stub `fetch`. There is no `.env`.
 5  confirm it is reachable from src/index.ts
 6  test/unit — a companion test is expected here (unlike the Go SDK, this repo honours that)
 7  README table row
-8  pnpm check
+8  bun run verify
 ```
 
 **Both index files matter.** A resource exported from its category barrel but unreachable from
@@ -58,7 +58,7 @@ No services required — tests stub `fetch`. There is no `.env`.
 1  src/transport/{http,fetch,retry,errors}.ts
 2  RETRY IDEMPOTENCY IS A SAFETY RULE: 429 always; 5xx only for GET/DELETE
 3  a new default belongs beside the code that uses it (no constants module exists here)
-4  pnpm check
+4  bun run verify
 ```
 
 **Never make a non-idempotent method retryable.**
@@ -72,7 +72,7 @@ No services required — tests stub `fetch`. There is no `.env`.
 2  cite the RFC — do not improvise
 3  constant-time comparison for signatures
 4  NEGATIVE tests: bad signature, unknown kid, expired token, skew boundary
-5  pnpm check
+5  bun run verify
 ```
 
 Never weaken verification to make a test pass; never add a skip flag.
@@ -86,7 +86,7 @@ Never weaken verification to make a test pass; never add a skip flag.
 2  keep the four classes distinct: ApiError | NetworkError | ValidationError | AuthError
 3  NetworkError MUST keep status 0 / code "network_error"
 4  update docs/design-decisions if the model itself changes
-5  pnpm check
+5  bun run verify
 ```
 
 ## Release
@@ -94,11 +94,11 @@ Never weaken verification to make a test pass; never add a skip flag.
 ```text
 1  bump package.json version AND src/version.ts   (they are kept in sync BY HAND)
 2  CHANGELOG.md
-3  pnpm check && pnpm build
+3  bun run verify
 4  tag vX.Y.Z and push the tag
 ```
 
-`release.yml` then runs install/typecheck/lint/test/build and `pnpm publish --access public`.
+`release.yml` then runs install/typecheck/check/test/build and `npm publish --access public --provenance`.
 
 > **The two version numbers are not linked.** Forgetting `src/version.ts` ships a package whose
 > `VERSION` export lies. There are no changesets in this repo.
@@ -109,12 +109,12 @@ Never weaken verification to make a test pass; never add a skip flag.
 ## Finish any task
 
 ```bash
-pnpm check
+bun run verify
 git diff
 ```
 
-`pnpm check` is `typecheck && lint && test`. Note CI's `ci.yml` does **not** run lint — `lint.yml`
-does — so `pnpm check` locally is stricter than a single CI job.
+`bun run verify` is `typecheck && check && test && build` (`check` is Biome lint and formatting). Note CI's
+`ci.yml` does **not** run Biome — `lint.yml` does — so `bun run verify` locally is stricter than a single CI job.
 
 ### Escalate rather than proceed
 

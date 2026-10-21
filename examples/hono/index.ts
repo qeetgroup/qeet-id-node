@@ -4,7 +4,7 @@
 // wiring the way Express/Fastify's default JSON parsers require.
 //
 //   npm install hono @hono/node-server
-//   QEETID_API_KEY=qk_… QEETID_WEBHOOK_SECRET=whsec_… npx tsx examples/hono
+//   QEETID_API_KEY=qk_… QEETID_WEBHOOK_SECRET=whsec_… bun examples/hono/index.ts
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { ApiError, AuthError, QeetID, constructEvent } from "../../src/index.js";

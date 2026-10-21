@@ -18,19 +18,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # package.json requires >=18.17 (global fetch/webcrypto). Test the floor + current LTS.
-        node: ["18.17", "20", "22", "24"]
+        # package.json requires >=22 (18 and 20 are end-of-life). The tests run
+        # on Node, not bun: Node is what integrators run the SDK on.
+        node: ["22", "24", "26"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
-          cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm build
-      - run: pnpm test:coverage
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run build
+      - run: bun run test:coverage

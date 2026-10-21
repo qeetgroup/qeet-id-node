@@ -1,7 +1,7 @@
 // Runs a free-text search over the audit log and verifies the hash chain
 // is intact.
 //
-//   QEETID_API_KEY=qk_… npx tsx examples/administration/auditlogs <tenant-id> "<query>"
+//   QEETID_API_KEY=qk_… bun examples/administration/auditlogs/index.ts <tenant-id> "<query>"
 import { QeetID } from "../../../src/index.js";
 
 async function main() {

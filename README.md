@@ -1,6 +1,6 @@
 # qeet-id-node
 
-[![Node Version](https://img.shields.io/badge/node-18.17%2B-339933?logo=node.js)](package.json)
+[![Node Version](https://img.shields.io/badge/node-22%2B-339933?logo=node.js)](package.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 The official server-side Node.js/TypeScript SDK for [Qeet ID](https://qeet.in) — the passkeys-first identity platform. One client, ~90 typed methods across users, organizations, roles, federation (OIDC/SAML/SCIM/LDAP), fine-grained authorization (RBAC/ReBAC/AuthZEN), AI-agent identities, compliance, and billing — with local JWT verification, automatic retries, auto-pagination, and webhook signature verification built in, on zero third-party dependencies.
@@ -63,14 +63,14 @@ A quick glossary before the code, for anyone new to identity platforms — skip 
 
 ## Requirements
 
-- **Node.js 18.17+** (global `fetch` and `node:crypto`'s `webcrypto` — no third-party HTTP or JWT library).
+- **Node.js 22+** (global `fetch` and `node:crypto`'s `webcrypto` — no third-party HTTP or JWT library).
 - A Qeet ID account and a server-side API key (`qk_…`) — see [qeet.in](https://qeet.in) to create one.
 
 ## Installation
 
 ```bash
 npm install @qeet-id/node
-# or: pnpm add @qeet-id/node / yarn add @qeet-id/node
+# or: bun add @qeet-id/node / pnpm add @qeet-id/node / yarn add @qeet-id/node
 ```
 
 ```ts
@@ -93,7 +93,7 @@ async function main() {
   const user = await client.users.create({
     tenant_id: process.env.QEETID_TENANT_ID!,
     email: "ada@example.com",
-    name: "Ada Lovelace",
+    display_name: "Ada Lovelace",
   });
   console.log("created", user.id);
 }
@@ -235,23 +235,23 @@ Every resource is a property directly on `QeetID` — one property access away, 
 <details open>
 <summary><strong>Administration</strong> — tenant operations</summary>
 
-| Property         | Manages                                                                            |
-| ---------------- | ---------------------------------------------------------------------------------- |
-| `branding`       | Hosted-login branding                                                              |
-| `invitations`    | Org invitations                                                                    |
-| `emailTemplates` | Transactional email templates                                                      |
-| `apiKeys`        | Server-side API keys                                                               |
-| `vault`          | Encrypted secrets store                                                            |
-| `tokenVault`     | Connected third-party OAuth accounts held on behalf of your users                  |
-| `webhooks`       | Webhook subscriptions, deliveries, retries                                         |
-| `auditLogs`      | Hash-chained audit log — read, free-text search, chain `verify`, anomaly detection |
-| `analytics`      | Dashboard KPI overview                                                             |
-| `gdpr`           | Erasure and data-export requests                                                   |
-| `billing`        | Plans, subscription, invoices, checkout                                            |
-| `retention`      | Data-retention policy                                                              |
-| `rateLimits`     | Per-tenant rate-limit overrides                                                    |
-| `logSinks`       | SIEM log forwarding                                                                |
-| `adminLinks`     | Delegated admin-portal links                                                       |
+| Property         | Manages                                                                                                                                |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `branding`       | Hosted-login branding                                                                                                                  |
+| `invitations`    | Org invitations                                                                                                                        |
+| `emailTemplates` | Transactional email templates                                                                                                          |
+| `apiKeys`        | Server-side API keys                                                                                                                   |
+| `vault`          | Encrypted secrets store                                                                                                                |
+| `tokenVault`     | Connected third-party OAuth accounts held on behalf of your users. `getAccessToken` is deprecated: it hands out the raw provider token |
+| `webhooks`       | Webhook subscriptions, deliveries, retries                                                                                             |
+| `auditLogs`      | Hash-chained audit log — read, free-text search, chain `verify`, anomaly detection                                                     |
+| `analytics`      | Dashboard KPI overview                                                                                                                 |
+| `gdpr`           | Erasure and data-export requests                                                                                                       |
+| `billing`        | Plans, subscription, invoices, checkout                                                                                                |
+| `retention`      | Data-retention policy                                                                                                                  |
+| `rateLimits`     | Per-tenant rate-limit overrides                                                                                                        |
+| `logSinks`       | SIEM log forwarding                                                                                                                    |
+| `adminLinks`     | Delegated admin-portal links                                                                                                           |
 
 </details>
 
@@ -294,6 +294,27 @@ try {
 }
 ```
 
+### Protecting your own service (token guard)
+
+A service that accepts Qeet ID access tokens (an MCP server, an API) guards each call with
+introspection, which reports a token revoked as soon as its account or agent is. Create one guard
+per service: `audience` is the service's identifier (the resource registered for it in Qeet ID),
+and the client is a confidential application that serves it.
+
+```ts
+const guard = client.oauth.tokenGuard({
+  audience: "https://mcp.example.com", // required: tokens for any other service are refused
+  clientId: process.env.QEET_CLIENT_ID!,
+  clientSecret: process.env.QEET_CLIENT_SECRET!,
+});
+
+const result = await guard.verify(token, "mcp:read"); // throws ApiError otherwise
+```
+
+`verify` throws 401 `token_inactive` (not active), 401 `invalid_token` "audience mismatch" (issued
+for another service, or with no audience at all), or 403 `insufficient_scope`. `allowAnyAudience:
+true` admits a token with no audience; avoid it, because such a token isn't shown to be for you.
+
 ### Choosing an authorization model
 
 You don't have to pick one — most apps use RBAC for coarse admin/member roles and add ReBAC only where per-resource sharing shows up (documents, projects, tickets). Use this table to decide where a given check belongs:
@@ -328,7 +349,8 @@ const decision = await client.decisions.evaluate(tenantId, {
 Every listable resource has an `all(...)` async generator that walks pages lazily. Break out of the loop and paging stops immediately — no wasted requests for collections you only need the first few items from.
 
 ```ts
-for await (const user of client.users.all({ tenant: tenantId })) {
+for await (const user of client.users.all()) {
+  // the credential's own organisation
   console.log(user.email);
 }
 ```
@@ -492,7 +514,7 @@ Runnable examples live in [`examples/`](./examples), grouped the same way as the
 
 This SDK follows [Semantic Versioning](https://semver.org/). It is currently **pre-1.0** — minor versions may include breaking changes, documented in [CHANGELOG.md](./CHANGELOG.md). Once a resource's request/response shape stabilizes against the live backend, breaking it is treated as a real cost, not a free rename.
 
-Supported Node.js versions: 18.17+ through current, matching the CI matrix in [.github/workflows/ci.yml](.github/workflows/ci.yml).
+Supported Node.js versions: 22+ through current, matching the CI matrix in [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ## Contributing
 

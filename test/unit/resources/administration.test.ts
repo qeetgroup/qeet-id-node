@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
 import { recordingClient } from "../../helpers/mock-transport.js";
 import { ValidationError } from "../../../src/errors/index.js";
 import { isWebhookEnabled, type Webhook } from "../../../src/administration/webhooks.js";
+import { resetRawVaultTokenWarningForTests } from "../../../src/administration/token-vault.js";
 
 describe("BrandingService", () => {
   it("get() reads the tenant-scoped branding settings", async () => {
@@ -461,6 +463,34 @@ describe("TokenVaultService — mixed calling conventions (brand-new resource, n
     expect(rec.path).toBe("/v1/vault/tokens/github/access-token");
     expect(rec.path).not.toContain("/tenants/");
     expect(result.access_token).toBe("gho_live_abc123");
+  });
+
+  it("getAccessToken() warns once per process that it hands out the raw token, and still works", async () => {
+    resetRawVaultTokenWarningForTests();
+    const spy = vi.spyOn(process, "emitWarning").mockImplementation(() => undefined);
+    try {
+      const { client } = recordingClient(JSON.stringify({ access_token: "gho_live_abc123" }));
+      const first = await client.tokenVault.getAccessToken("github");
+      await client.tokenVault.getAccessToken("slack");
+      expect(first.access_token).toBe("gho_live_abc123");
+      expect(spy).toHaveBeenCalledTimes(1);
+      const [message, options] = spy.mock.calls[0] as [string, { code: string; type: string }];
+      expect(options).toMatchObject({ code: "QEETID_RAW_VAULT_TOKEN", type: "DeprecationWarning" });
+      expect(message).toMatch(/tokenVault\.call\(\)/);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("getAccessToken() is marked @deprecated, naming the brokered call and the removal point", () => {
+    const source = readFileSync(new URL("../../../src/administration/token-vault.ts", import.meta.url), "utf-8");
+    const doc = source.slice(
+      source.lastIndexOf("/**", source.indexOf("getAccessToken(provider")),
+      source.indexOf("getAccessToken(provider"),
+    );
+    expect(doc).toMatch(/@deprecated/);
+    expect(doc).toMatch(/tokenVault\.call\(\)/);
+    expect(doc).toMatch(/QTID-246/);
   });
 
   it("disconnect() takes only `provider` — no tenantId/userId in the signature or the path", async () => {

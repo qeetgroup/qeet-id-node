@@ -1,11 +1,13 @@
 export { SessionsService } from "./sessions.js";
 export type { Claims, VerifyOptions } from "./sessions.js";
 
-export { OAuthService, SigningKeysService, OAuthGrantsService, OAuthDevicesService } from "./oauth.js";
+export { OAuthService, SigningKeysService, OAuthGrantsService, OAuthDevicesService, TokenGuard } from "./oauth.js";
 export type {
   TokenExchangeInput,
   TokenExchangeResult,
   IntrospectResult,
+  ClientCredentials,
+  TokenGuardOptions,
   DeviceAuthorizationResult,
   DeviceContext,
   BackchannelAuthorizeInput,
@@ -18,7 +20,14 @@ export type {
 } from "./oauth.js";
 
 export { OIDCService } from "./oidc.js";
-export type { OIDCClient, CreateOIDCClientInput, UpdateOIDCClientInput, OIDCRotateSecretResult, ShadowAIClient } from "./oidc.js";
+export type {
+  OIDCClient,
+  CreateOIDCClientInput,
+  UpdateOIDCClientInput,
+  RegisteredOIDCClient,
+  OIDCRotateSecretResult,
+  ShadowAIClient,
+} from "./oidc.js";
 
 export { SAMLService } from "./saml.js";
 export type { SAMLConnection, CreateSAMLConnectionInput, UpdateSAMLConnectionInput, SAMLTestResult } from "./saml.js";
