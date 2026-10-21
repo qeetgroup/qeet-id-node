@@ -294,6 +294,27 @@ try {
 }
 ```
 
+### Protecting your own service (token guard)
+
+A service that accepts Qeet ID access tokens (an MCP server, an API) guards each call with
+introspection, which reports a token revoked as soon as its account or agent is. Create one guard
+per service: `audience` is the service's identifier (the resource registered for it in Qeet ID),
+and the client is a confidential application that serves it.
+
+```ts
+const guard = client.oauth.tokenGuard({
+  audience: "https://mcp.example.com", // required: tokens for any other service are refused
+  clientId: process.env.QEET_CLIENT_ID!,
+  clientSecret: process.env.QEET_CLIENT_SECRET!,
+});
+
+const result = await guard.verify(token, "mcp:read"); // throws ApiError otherwise
+```
+
+`verify` throws 401 `token_inactive` (not active), 401 `invalid_token` "audience mismatch" (issued
+for another service, or with no audience at all), or 403 `insufficient_scope`. `allowAnyAudience:
+true` admits a token with no audience; avoid it, because such a token isn't shown to be for you.
+
 ### Choosing an authorization model
 
 You don't have to pick one — most apps use RBAC for coarse admin/member roles and add ReBAC only where per-resource sharing shows up (documents, projects, tickets). Use this table to decide where a given check belongs:
