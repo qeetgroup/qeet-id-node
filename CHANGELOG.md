@@ -35,6 +35,16 @@ The library is unpublished, so these breaking changes ship without a major versi
   ignored it). Bulk results are `succeeded`/`failed` with each failed row's `line`. `listDeleted()`
   returns the recycle-bin shape (`DeletedUser`). `verifyEmailStart(id)` has no address override,
   which the server ignores by design.
+- **Application and agent calls match the API** (QTID-536). `oidc.create()` returns the server's
+  `{ client, client_secret?, warning? }` (it was read as the application, so every field was empty
+  and the one-time secret was lost). `OIDCClient` and its inputs use the API's `type` and
+  `post_logout_uris` plus `pkce_exempt_until` and the logout URIs; `token_endpoint_auth_method` is
+  gone (the API refuses it). `rotateSecret()` returns `{ client_secret, warning }`.
+  `ShadowAIClient` has `id`, `grant_types`, `live_grants` and `created_at`. `Agent` adds `status`
+  and `sponsor_user_id` and has no `tenant_id`; `agents.create()` requires `sponsor_user_id` (the
+  server refuses an agent without one); `agents.update()` resolves to nothing (204);
+  `agents.token(agentId, secret)` sends only those two (the server refused `tenant_id` and
+  `scope`).
 - **Introspection and revocation authenticate the client** (QTID-537). `introspect(token, client)`
   and `revoke(token, client)` now take `{ clientId, clientSecret }` and send them over HTTP Basic.
   The server authenticates the client first, so both calls were refused every time, and the token

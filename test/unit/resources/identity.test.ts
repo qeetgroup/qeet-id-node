@@ -314,41 +314,51 @@ describe("ServicePrincipalsService", () => {
 });
 
 describe("AgentsService", () => {
-  it("create() POSTs to the tenant-scoped path with tenant_id only in the path, never in the body", async () => {
+  it("create() sends the required sponsor, with tenant_id only in the path, and returns the one-time secret", async () => {
     const { client, rec } = recordingClient(
-      '{"id":"a1","tenant_id":"t1","name":"bot","scopes":["read"],"token_ttl_seconds":3600,"disabled":false,"created_at":"x"}',
+      JSON.stringify({
+        id: "a1",
+        name: "bot",
+        scopes: ["user.read"],
+        token_ttl_seconds: 3600,
+        status: "active",
+        disabled: false,
+        sponsor_user_id: "u1",
+        created_at: "x",
+        secret: "agent_secret",
+      }),
     );
 
-    await client.agents.create("t1", { name: "bot", scopes: ["read"], token_ttl_seconds: 3600 });
+    const agent = await client.agents.create("t1", { name: "bot", sponsor_user_id: "u1", scopes: ["user.read"], token_ttl_seconds: 3600 });
 
     expect(rec.method).toBe("POST");
     expect(rec.path).toBe("/v1/tenants/t1/agents");
-    // CreateAgentInput has no tenant_id field — it travels only in the URL.
-    expect(JSON.parse(rec.body)).toStrictEqual({ name: "bot", scopes: ["read"], token_ttl_seconds: 3600 });
+    expect(JSON.parse(rec.body)).toStrictEqual({ name: "bot", sponsor_user_id: "u1", scopes: ["user.read"], token_ttl_seconds: 3600 });
+    expect(agent).toMatchObject({ status: "active", sponsor_user_id: "u1", secret: "agent_secret" });
+    // @ts-expect-error — every agent needs a sponsor; the server refuses one without
+    void (() => client.agents.create("t1", { name: "bot" }));
   });
 
-  it("update() PATCHes the tenant-scoped per-agent path with only { disabled }", async () => {
-    const { client, rec } = recordingClient(
-      '{"id":"a1","tenant_id":"t1","name":"bot","scopes":[],"token_ttl_seconds":3600,"disabled":true,"created_at":"x"}',
-    );
+  it("update() PATCHes only { disabled } and resolves to nothing (the server answers 204)", async () => {
+    const { client, rec } = recordingClient("", { status: 204 });
 
-    await client.agents.update("t1", "a1", { disabled: true });
+    const result = await client.agents.update("t1", "a1", { disabled: true });
 
     expect(rec.method).toBe("PATCH");
     expect(rec.path).toBe("/v1/tenants/t1/agents/a1");
     expect(JSON.parse(rec.body)).toStrictEqual({ disabled: true });
+    expect(result).toBeUndefined();
   });
 
-  it("token() POSTs to the unscoped /v1/agents/token path, omitting scope when not given and including it when given", async () => {
-    const noScope = recordingClient('{"access_token":"tok","token_type":"Bearer","expires_in":300}');
-    await noScope.client.agents.token("t1", "a1", "secret1");
-    expect(noScope.rec.method).toBe("POST");
-    expect(noScope.rec.path).toBe("/v1/agents/token");
-    expect(JSON.parse(noScope.rec.body)).toStrictEqual({ tenant_id: "t1", agent_id: "a1", secret: "secret1" });
+  it("token() POSTs only agent_id and secret to /v1/agents/token (the server refuses anything else)", async () => {
+    const { client, rec } = recordingClient('{"access_token":"tok","token_type":"Bearer","expires_in":300,"scope":"user.read"}');
 
-    const withScope = recordingClient('{"access_token":"tok","token_type":"Bearer","expires_in":300,"scope":"read"}');
-    await withScope.client.agents.token("t1", "a1", "secret1", "read");
-    expect(JSON.parse(withScope.rec.body)).toStrictEqual({ tenant_id: "t1", agent_id: "a1", secret: "secret1", scope: "read" });
+    const token = await client.agents.token("a1", "secret1");
+
+    expect(rec.method).toBe("POST");
+    expect(rec.path).toBe("/v1/agents/token");
+    expect(JSON.parse(rec.body)).toStrictEqual({ agent_id: "a1", secret: "secret1" });
+    expect(token.access_token).toBe("tok");
   });
 
   it("suspend() POSTs a truly empty body (no '{}') to the tenant-scoped .../suspend path", async () => {
