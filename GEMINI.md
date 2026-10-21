@@ -9,14 +9,14 @@ GEMINI.md  →  AGENTS.md  →  docs/llm/*
 
 ## Canonical context
 
-| File | For |
-|---|---|
-| [qeet-repo.yml](qeet-repo.yml) | Machine-readable repository identity |
-| [AGENTS.md](AGENTS.md) | **Rules, commands, what CI enforces** |
-| [docs/llm/context.md](docs/llm/context.md) | How this repository actually works |
-| [docs/llm/boundaries.md](docs/llm/boundaries.md) | What it owns, and what it must not touch |
-| [docs/llm/workflows.md](docs/llm/workflows.md) | Step-by-step for common changes |
-| [docs/llm/architecture-map.md](docs/llm/architecture-map.md) | "Where is X?" — fastest path to a file |
+| File                                                         | For                                      |
+| ------------------------------------------------------------ | ---------------------------------------- |
+| [qeet-repo.yml](qeet-repo.yml)                               | Machine-readable repository identity     |
+| [AGENTS.md](AGENTS.md)                                       | **Rules, commands, what CI enforces**    |
+| [docs/llm/context.md](docs/llm/context.md)                   | How this repository actually works       |
+| [docs/llm/boundaries.md](docs/llm/boundaries.md)             | What it owns, and what it must not touch |
+| [docs/llm/workflows.md](docs/llm/workflows.md)               | Step-by-step for common changes          |
+| [docs/llm/architecture-map.md](docs/llm/architecture-map.md) | "Where is X?" — fastest path to a file   |
 
 Parent context: **L0** `qeetgroup/qeet-context` · **L1** `qeetgroup/qeet-id-context`.
 
