@@ -1,7 +1,7 @@
 // Verifies a Qeet ID session token locally (against the published JWKS)
 // and runs a permission check.
 //
-//   QEETID_API_KEY=qk_… QEETID_TOKEN=<jwt> npx tsx examples/authentication/verify-session
+//   QEETID_API_KEY=qk_… QEETID_TOKEN=<jwt> bun examples/authentication/verify-session/index.ts
 import { QeetID } from "../../../src/index.js";
 
 async function main() {

@@ -1,7 +1,7 @@
 // Creates an organization (tenant) and lists the first page of existing
 // ones.
 //
-//   QEETID_API_KEY=qk_… npx tsx examples/identity/organizations
+//   QEETID_API_KEY=qk_… bun examples/identity/organizations/index.ts
 import { QeetID } from "../../../src/index.js";
 
 async function main() {

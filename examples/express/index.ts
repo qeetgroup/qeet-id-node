@@ -5,7 +5,7 @@
 // signed.
 //
 //   npm install express
-//   QEETID_API_KEY=qk_… QEETID_WEBHOOK_SECRET=whsec_… npx tsx examples/express
+//   QEETID_API_KEY=qk_… QEETID_WEBHOOK_SECRET=whsec_… bun examples/express/index.ts
 import express, { type NextFunction, type Request, type Response } from "express";
 import { ApiError, AuthError, QeetID, constructEvent } from "../../src/index.js";
 
@@ -68,7 +68,7 @@ app.post("/webhooks/qeet", express.raw({ type: "application/json" }), (req, res)
   }
 });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// Express recognises an error handler by its four parameters, so `_next` stays.
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof ApiError) {
     res.status(err.status || 500).json({ error: err.code, message: err.message, requestId: err.requestId });

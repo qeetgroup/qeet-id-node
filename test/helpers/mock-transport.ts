@@ -31,8 +31,10 @@ export function recordingClient(response: string, opts: RecordingClientOptions =
     rec.query = url.search;
     rec.body = typeof init?.body === "string" ? init.body : "";
     rec.headers = new Headers(init?.headers as Record<string, string>);
-    return new Response(response, {
-      status: opts.status ?? 200,
+    const status = opts.status ?? 200;
+    // 204/205/304 can't carry a body, not even an empty one.
+    return new Response([204, 205, 304].includes(status) ? null : response, {
+      status,
       headers: { "content-type": "application/json", ...opts.headers },
     });
   }) as typeof fetch;

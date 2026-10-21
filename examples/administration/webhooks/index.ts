@@ -4,7 +4,7 @@
 // signature verification can see the original bytes. See examples/express
 // and examples/fastify for the same thing wired into a framework.
 //
-//   QEETID_WEBHOOK_SECRET=whsec_… npx tsx examples/administration/webhooks
+//   QEETID_WEBHOOK_SECRET=whsec_… bun examples/administration/webhooks/index.ts
 import { createServer } from "node:http";
 import { constructEvent } from "../../../src/index.js";
 

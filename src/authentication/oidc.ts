@@ -2,50 +2,80 @@ import type { RequestOpts } from "../client/options.js";
 import { resolveEnvelope, type Envelope } from "../types/common.js";
 import type { Transport } from "../transport/http.js";
 
+/** An application (OAuth / OIDC client) as the API returns it. */
 export interface OIDCClient {
   id: string;
-  tenant_id?: string;
-  name: string;
+  tenant_id: string;
   client_id: string;
+  /** `confidential` (has a secret) or `public` (a browser or mobile app). */
+  type: "confidential" | "public";
+  name: string;
   redirect_uris: string[];
+  /** Where the application may send people after sign-out. */
+  post_logout_uris: string[];
   grant_types: string[];
   scopes: string[];
-  token_endpoint_auth_method?: string;
   created_at: string;
-  updated_at?: string;
+  /** When a confidential application's exemption from PKCE ends; null: none. */
+  pkce_exempt_until: string | null;
+  /** Receives a signed logout token when someone it signed in signs out; "" for none. */
+  backchannel_logout_uri: string;
+  /** Loaded by the hosted signed-out page; "" for none. */
+  frontchannel_logout_uri: string;
 }
 
 export interface CreateOIDCClientInput {
   name: string;
+  /** Default `confidential`. */
+  type?: "confidential" | "public";
   redirect_uris: string[];
+  post_logout_uris?: string[];
   grant_types?: string[];
   scopes?: string[];
-  token_endpoint_auth_method?: string;
+  backchannel_logout_uri?: string;
+  frontchannel_logout_uri?: string;
 }
 
 export interface UpdateOIDCClientInput {
   name?: string;
   redirect_uris?: string[];
+  post_logout_uris?: string[];
   grant_types?: string[];
   scopes?: string[];
-  token_endpoint_auth_method?: string;
-}
-
-export interface OIDCRotateSecretResult {
-  client_id: string;
-  client_secret: string;
+  /** Sets (an ISO time within 90 days) or clears (null) a confidential application's PKCE exemption. */
+  pkce_exempt_until?: string | null;
+  backchannel_logout_uri?: string;
+  frontchannel_logout_uri?: string;
 }
 
 /**
- * An OIDC client with live grants that isn't registered as a managed
- * agent/service principal — a candidate for Shadow-AI review.
+ * What registering an application returns: the application, and, for a
+ * confidential one, its secret. The secret is shown once and never again.
+ */
+export interface RegisteredOIDCClient {
+  client: OIDCClient;
+  client_secret?: string;
+  warning?: string;
+}
+
+/** A new secret for an application, shown once. */
+export interface OIDCRotateSecretResult {
+  client_secret: string;
+  warning?: string;
+}
+
+/**
+ * An application holding live machine grants (client credentials, token
+ * exchange) that isn't registered as a managed agent or service principal:
+ * a candidate for Shadow-AI review.
  */
 export interface ShadowAIClient {
+  id: string;
   client_id: string;
   name: string;
-  grant_count?: number;
-  last_used_at?: string;
-  first_seen_at?: string;
+  grant_types: string[];
+  live_grants: number;
+  created_at: string;
 }
 
 /**
@@ -58,8 +88,9 @@ export interface ShadowAIClient {
 export class OIDCService {
   constructor(private readonly t: Transport) {}
 
-  create(tenantId: string, input: CreateOIDCClientInput, opts?: RequestOpts): Promise<OIDCClient> {
-    return this.t.post<OIDCClient>(`/v1/tenants/${encodeURIComponent(tenantId)}/oidc/clients`, input, opts);
+  /** Registers an application; a confidential one's secret is in the result, once. */
+  create(tenantId: string, input: CreateOIDCClientInput, opts?: RequestOpts): Promise<RegisteredOIDCClient> {
+    return this.t.post<RegisteredOIDCClient>(`/v1/tenants/${encodeURIComponent(tenantId)}/oidc/clients`, input, opts);
   }
 
   get(tenantId: string, id: string, opts?: RequestOpts): Promise<OIDCClient> {
@@ -74,6 +105,7 @@ export class OIDCService {
     return this.t.delete(`/v1/tenants/${encodeURIComponent(tenantId)}/oidc/clients/${encodeURIComponent(id)}`, opts);
   }
 
+  /** Issues a new secret (shown once); the old one stops working. */
   rotateSecret(tenantId: string, id: string, opts?: RequestOpts): Promise<OIDCRotateSecretResult> {
     return this.t.post<OIDCRotateSecretResult>(
       `/v1/tenants/${encodeURIComponent(tenantId)}/oidc/clients/${encodeURIComponent(id)}/rotate-secret`,

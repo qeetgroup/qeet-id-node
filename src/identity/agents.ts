@@ -4,18 +4,23 @@ import type { Transport } from "../transport/http.js";
 
 export interface Agent {
   id: string;
-  tenant_id: string;
   name: string;
   scopes: string[];
   token_ttl_seconds: number;
+  status: "active" | "suspended" | "decommissioned";
+  /** True whenever `status` isn't `active` (kept for compatibility). */
   disabled: boolean;
+  /** The human accountable for the agent; absent only on agents made before sponsors existed. */
+  sponsor_user_id?: string;
   created_at: string;
-  /** Only present on create. */
+  /** The agent's secret: present only in `create`'s result, once. */
   secret?: string;
 }
 
 export interface CreateAgentInput {
   name: string;
+  /** The user accountable for the agent. Required: an agent with no sponsor is refused. */
+  sponsor_user_id: string;
   scopes?: string[];
   token_ttl_seconds?: number;
 }
@@ -73,16 +78,18 @@ export class AgentsService {
     return resolveEnvelope(env);
   }
 
-  /** Toggles `disabled` — the only field the backend allows mutating here. */
-  update(tenantId: string, id: string, input: UpdateAgentInput, opts?: RequestOpts): Promise<Agent> {
-    return this.t.patch<Agent>(`/v1/tenants/${encodeURIComponent(tenantId)}/agents/${encodeURIComponent(id)}`, input, opts);
+  /** Toggles `disabled`, the only field the backend allows changing here. Answers 204, nothing. */
+  update(tenantId: string, id: string, input: UpdateAgentInput, opts?: RequestOpts): Promise<void> {
+    return this.t.patch<void>(`/v1/tenants/${encodeURIComponent(tenantId)}/agents/${encodeURIComponent(id)}`, input, opts);
   }
 
-  /** Mints a short-lived access token for an AI agent. */
-  token(tenantId: string, agentId: string, secret: string, scope?: string, opts?: RequestOpts): Promise<AgentTokenResult> {
-    const body: Record<string, string> = { tenant_id: tenantId, agent_id: agentId, secret };
-    if (scope) body.scope = scope;
-    return this.t.post<AgentTokenResult>("/v1/agents/token", body, opts);
+  /**
+   * Mints a short-lived access token for an AI agent from its id and secret.
+   * The token carries the agent's configured scopes; there is nothing else to
+   * send (the organisation comes from the agent).
+   */
+  token(agentId: string, secret: string, opts?: RequestOpts): Promise<AgentTokenResult> {
+    return this.t.post<AgentTokenResult>("/v1/agents/token", { agent_id: agentId, secret }, opts);
   }
 
   /** Reversibly disables an agent — it can be resumed. */

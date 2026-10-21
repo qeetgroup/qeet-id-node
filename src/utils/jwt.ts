@@ -68,18 +68,19 @@ export class JWKSVerifier {
     const skewMs = (opts.clockSkewSeconds ?? DEFAULT_CLOCK_SKEW_SECONDS) * 1000;
     const parts = token.split(".");
     if (parts.length !== 3) throw new AuthError("invalid_token", "malformed token");
+    const [headerSegment, payloadSegment, signatureSegment] = parts as [string, string, string];
 
-    const header = decodeSegment<{ alg: string; kid: string }>(parts[0]!);
+    const header = decodeSegment<{ alg: string; kid: string }>(headerSegment);
     if (header.alg !== "ES256") throw new AuthError("invalid_token", `unsupported alg ${header.alg}`);
 
     const key = await this.resolveKey(header.kid);
-    const signature = toRawSignature(base64UrlDecode(parts[2]!));
-    const signingInput = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+    const signature = toRawSignature(base64UrlDecode(signatureSegment));
+    const signingInput = new TextEncoder().encode(`${headerSegment}.${payloadSegment}`);
 
     const valid = await webcrypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, signature, signingInput);
     if (!valid) throw new AuthError("invalid_token", "signature verification failed");
 
-    const raw = decodeSegment<Record<string, unknown>>(parts[1]!);
+    const raw = decodeSegment<Record<string, unknown>>(payloadSegment);
     const now = Date.now();
     const exp = numClaim(raw.exp);
     if (!exp || now > exp * 1000 + skewMs) throw new AuthError("invalid_token", "token expired");
@@ -169,9 +170,11 @@ function decodeSegment<T>(segment: string): T {
 }
 
 /** JWS ES256 signatures are already raw r||s (64 bytes) — WebCrypto's ECDSA verify expects exactly this format, so this is an identity/length-check helper, not a conversion. */
-function toRawSignature(sig: Buffer): Buffer {
+function toRawSignature(sig: Buffer): Uint8Array<ArrayBuffer> {
   if (sig.length !== 64) throw new AuthError("invalid_token", "malformed signature");
-  return sig;
+  // A copy on a plain ArrayBuffer: WebCrypto's BufferSource excludes a Buffer
+  // that may sit on a SharedArrayBuffer.
+  return new Uint8Array(sig);
 }
 
 function strClaim(v: unknown): string {

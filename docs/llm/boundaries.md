@@ -12,14 +12,14 @@ build.
 
 ## Does not own
 
-| Not owned | Owner |
-|---|---|
-| **The API contract** | `qeet-id-server` — see its OpenAPI documents |
-| Authorization, tenancy, token issuance | `qeet-id-server` |
-| The browser/React story | `qeet-id-react` |
-| The Go story | `qeet-id-go` |
-| Documentation | `qeet-id-docs` |
-| Organization / product standards | `qeet-context` (L0) / `qeet-id-context` (L1) |
+| Not owned                              | Owner                                        |
+| -------------------------------------- | -------------------------------------------- |
+| **The API contract**                   | `qeet-id-server` — see its OpenAPI documents |
+| Authorization, tenancy, token issuance | `qeet-id-server`                             |
+| The browser/React story                | `qeet-id-react`                              |
+| The Go story                           | `qeet-id-go`                                 |
+| Documentation                          | `qeet-id-docs`                               |
+| Organization / product standards       | `qeet-context` (L0) / `qeet-id-context` (L1) |
 
 **The SDK never adds behaviour the API lacks.** A missing endpoint is backend work, not a
 client-side simulation.
@@ -36,11 +36,11 @@ is a semver contract with consumers Qeet cannot survey.
 
 ## Security boundaries
 
-| Boundary | Enforcement |
-|---|---|
-| API key → wire | `src/transport/http.ts` — never logged, never in a thrown error |
-| Token → claims | `src/utils/jwt.ts` — ES256, unknown `kid` rejected |
-| Webhook body → event | `src/utils/webhook.ts` — HMAC, constant-time compare |
+| Boundary             | Enforcement                                                     |
+| -------------------- | --------------------------------------------------------------- |
+| API key → wire       | `src/transport/http.ts` — never logged, never in a thrown error |
+| Token → claims       | `src/utils/jwt.ts` — ES256, unknown `kid` rejected              |
+| Webhook body → event | `src/utils/webhook.ts` — HMAC, constant-time compare            |
 | Retry → side effects | `src/transport/retry.ts` — non-idempotent methods never retried |
 
 **This SDK is not a trust boundary.** It runs in the caller's process with the caller's API key.
@@ -50,22 +50,22 @@ is a semver contract with consumers Qeet cannot survey.
 The three SDKs differ, some deliberately and some accidentally. **Do not change one to match another
 without a decision.**
 
-| Concern | Node | Go | React |
-|---|---|---|---|
-| Error model | **throws**, 4 classes | `(T, error)`, 1 type | throws `AuthenticationError` |
-| Network failure | `NetworkError` (`status: 0`) | wrapped `fmt.Errorf` — **no type** | — |
-| Predicates | `isUnauthorized()` methods | methods on a pointer | **getters** |
-| Webhook header const | **lowercase** `x-qeet-signature` | canonical `X-Qeet-Signature` | n/a |
-| `constructEventFromRequest` | **deliberately omitted** | present | n/a |
-| Webhook payload | **parsed eagerly** | deferred `json.RawMessage` | n/a |
-| Pagination | async generator | `iter.Seq2` | **none** |
-| Claims fields | **all optional** — callers must assert | all non-pointer | n/a |
-| Constants | **scattered** per module | centralised (`qeet-id-go` internal constants) | a `constants` module exists (`qeet-id-react`) |
-| Config escape hatch | `fetch` | `HTTPClient` | neither |
-| Wire casing | **snake_case kept** (ADR-0004) | as-is | **camelCase mapped** |
-| Auth | `ApiKey` header | `ApiKey` header | **cookie + CSRF** |
-| Version export | `VERSION` | `qeetid.Version` | **none** |
-| Client type name | `QeetID` | `Client` | `QeetIDClient` |
+| Concern                     | Node                                   | Go                                            | React                                         |
+| --------------------------- | -------------------------------------- | --------------------------------------------- | --------------------------------------------- |
+| Error model                 | **throws**, 4 classes                  | `(T, error)`, 1 type                          | throws `AuthenticationError`                  |
+| Network failure             | `NetworkError` (`status: 0`)           | wrapped `fmt.Errorf` — **no type**            | —                                             |
+| Predicates                  | `isUnauthorized()` methods             | methods on a pointer                          | **getters**                                   |
+| Webhook header const        | **lowercase** `x-qeet-signature`       | canonical `X-Qeet-Signature`                  | n/a                                           |
+| `constructEventFromRequest` | **deliberately omitted**               | present                                       | n/a                                           |
+| Webhook payload             | **parsed eagerly**                     | deferred `json.RawMessage`                    | n/a                                           |
+| Pagination                  | async generator                        | `iter.Seq2`                                   | **none**                                      |
+| Claims fields               | **all optional** — callers must assert | all non-pointer                               | n/a                                           |
+| Constants                   | **scattered** per module               | centralised (`qeet-id-go` internal constants) | a `constants` module exists (`qeet-id-react`) |
+| Config escape hatch         | `fetch`                                | `HTTPClient`                                  | neither                                       |
+| Wire casing                 | **snake_case kept** (ADR-0004)         | as-is                                         | **camelCase mapped**                          |
+| Auth                        | `ApiKey` header                        | `ApiKey` header                               | **cookie + CSRF**                             |
+| Version export              | `VERSION`                              | `qeetid.Version`                              | **none**                                      |
+| Client type name            | `QeetID`                               | `Client`                                      | `QeetIDClient`                                |
 
 Two are worth calling out as genuine contradictions rather than style:
 
@@ -86,15 +86,15 @@ signatures · doc comments · adding a **new** method or resource.
 
 ## Requires coordination
 
-| Change | Why |
-|---|---|
-| **Any name in `src/index.ts`** | It is the package's public contract |
-| Auth scheme | Matches the server and the Go SDK |
-| Retry policy | A wrong change duplicates server-side writes |
-| Webhook header or algorithm | Must match `qeet-id-server` and the Go SDK |
-| Error class shape | Consumers `instanceof` and switch on it |
-| Node version floor | Affects who can install |
-| Adding a runtime dependency | Changes what every consumer installs |
+| Change                         | Why                                          |
+| ------------------------------ | -------------------------------------------- |
+| **Any name in `src/index.ts`** | It is the package's public contract          |
+| Auth scheme                    | Matches the server and the Go SDK            |
+| Retry policy                   | A wrong change duplicates server-side writes |
+| Webhook header or algorithm    | Must match `qeet-id-server` and the Go SDK   |
+| Error class shape              | Consumers `instanceof` and switch on it      |
+| Node version floor             | Affects who can install                      |
+| Adding a runtime dependency    | Changes what every consumer installs         |
 
 Product-level fan-out: `qeet-id-context/CHANGE-MATRIX.md`.
 
