@@ -577,21 +577,49 @@ describe("SAMLService vs SAMLServiceProvidersService — distinct path prefixes"
 // oidc.ts
 // ---------------------------------------------------------------------------
 describe("OIDCService", () => {
-  it("create() POSTs to the tenant-scoped /v1/tenants/{tenantId}/oidc/clients", async () => {
-    const { client, rec } = recordingClient(
-      JSON.stringify({
-        id: "c1",
-        name: "App",
-        client_id: "cid_1",
-        redirect_uris: ["https://x/cb"],
-        grant_types: ["authorization_code"],
-        scopes: ["openid"],
-        created_at: "t",
-      }),
-    );
-    await client.oidc.create("tenant_1", { name: "App", redirect_uris: ["https://x/cb"] });
+  // An application exactly as the API returns it
+  // (qeet-id-server internal/federation/oidc Client).
+  const serverApp = {
+    id: "c1",
+    tenant_id: "tenant_1",
+    client_id: "cid_1",
+    type: "confidential",
+    name: "App",
+    redirect_uris: ["https://x/cb"],
+    post_logout_uris: ["https://x/bye"],
+    grant_types: ["authorization_code", "refresh_token"],
+    scopes: ["openid"],
+    created_at: "t",
+    pkce_exempt_until: null,
+    backchannel_logout_uri: "",
+    frontchannel_logout_uri: "",
+  };
+
+  it("create() registers under the tenant path and returns the application and its one-time secret separately", async () => {
+    const { client, rec } = recordingClient(JSON.stringify({ client: serverApp, client_secret: "s3cret", warning: "secret shown once" }));
+
+    const registered = await client.oidc.create("tenant_1", {
+      name: "App",
+      type: "confidential",
+      redirect_uris: ["https://x/cb"],
+      post_logout_uris: ["https://x/bye"],
+    });
+
     expect(rec.method).toBe("POST");
     expect(rec.path).toBe("/v1/tenants/tenant_1/oidc/clients");
+    expect(JSON.parse(rec.body)).toStrictEqual({
+      name: "App",
+      type: "confidential",
+      redirect_uris: ["https://x/cb"],
+      post_logout_uris: ["https://x/bye"],
+    });
+    // The wrapper used to be read as the application itself: every field empty, the secret lost.
+    expect(registered.client.client_id).toBe("cid_1");
+    expect(registered.client.type).toBe("confidential");
+    expect(registered.client_secret).toBe("s3cret");
+    expect(registered.warning).toBe("secret shown once");
+    // @ts-expect-error — the API refuses token_endpoint_auth_method (it isn't a field)
+    void (() => client.oidc.create("tenant_1", { name: "x", redirect_uris: [], token_endpoint_auth_method: "none" }));
   });
 
   it("update() PATCHes the tenant-scoped path, not a top-level /v1/oidc/clients (previous SDK bug)", async () => {
@@ -604,12 +632,22 @@ describe("OIDCService", () => {
     expect(rec.path).not.toBe("/v1/oidc/clients/c1");
   });
 
-  it("rotateSecret() POSTs to .../oidc/clients/{id}/rotate-secret", async () => {
-    const { client, rec } = recordingClient(JSON.stringify({ client_id: "cid_1", client_secret: "new_secret" }));
+  it("rotateSecret() POSTs to .../oidc/clients/{id}/rotate-secret and reads the server's {client_secret, warning}", async () => {
+    const { client, rec } = recordingClient(JSON.stringify({ client_secret: "new_secret", warning: "secret shown once" }));
     const result = await client.oidc.rotateSecret("tenant_1", "c1");
     expect(rec.method).toBe("POST");
     expect(rec.path).toBe("/v1/tenants/tenant_1/oidc/clients/c1/rotate-secret");
-    expect(result.client_secret).toBe("new_secret");
+    expect(result).toStrictEqual({ client_secret: "new_secret", warning: "secret shown once" });
+  });
+
+  it("listShadowAI() reads the server's candidate fields", async () => {
+    const { client } = recordingClient(
+      JSON.stringify({
+        items: [{ id: "c9", client_id: "cid_9", name: "bot", grant_types: ["client_credentials"], live_grants: 2, created_at: "t" }],
+      }),
+    );
+    const out = await client.oidc.listShadowAI("tenant_1");
+    expect(out[0]).toMatchObject({ client_id: "cid_9", live_grants: 2, grant_types: ["client_credentials"] });
   });
 });
 

@@ -20,7 +20,14 @@ export type {
 } from "./oauth.js";
 
 export { OIDCService } from "./oidc.js";
-export type { OIDCClient, CreateOIDCClientInput, UpdateOIDCClientInput, OIDCRotateSecretResult, ShadowAIClient } from "./oidc.js";
+export type {
+  OIDCClient,
+  CreateOIDCClientInput,
+  UpdateOIDCClientInput,
+  RegisteredOIDCClient,
+  OIDCRotateSecretResult,
+  ShadowAIClient,
+} from "./oidc.js";
 
 export { SAMLService } from "./saml.js";
 export type { SAMLConnection, CreateSAMLConnectionInput, UpdateSAMLConnectionInput, SAMLTestResult } from "./saml.js";
