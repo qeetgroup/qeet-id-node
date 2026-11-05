@@ -43,7 +43,7 @@ practice changes, change it here first and record why.
 | No plaintext transport | `baseUrl` must be https except for localhost | — |
 | Webhooks: HMAC over timestamp and body, constant-time compare, replay window | 5-minute default tolerance, every secret tried during a rotation | [Standard Webhooks](https://www.standardwebhooks.com/); the server's `internal/developer/webhooks` |
 | JWT: pinned algorithm, required issuer and audience, bounded clock skew, kid-driven key refresh with a cooldown | ES256 only, `iss` and `aud` required, 30 s leeway | [RFC 8725 (JWT BCP)](https://www.rfc-editor.org/rfc/rfc8725); [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068); [`jose`](https://github.com/panva/jose) `jwtVerify` semantics, done with Web Crypto to keep zero runtime dependencies |
-| Client authentication by `client_secret_post` | the server doesn't form-decode Basic credentials, so the form body is the unambiguous choice | [RFC 6749 §2.3.1](https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1) |
+| Client authentication by `client_secret_post` | it sends credentials in the form body, which every OAuth server reads the same way; the server also accepts form-encoded HTTP Basic credentials | [RFC 6749 §2.3.1](https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1) |
 
 ## Packaging
 

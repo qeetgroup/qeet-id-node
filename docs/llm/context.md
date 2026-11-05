@@ -57,7 +57,7 @@ Standalone, needing no client: `constructWebhookEvent` (`src/webhooks/`), `Token
 | --- | --- |
 | Base URL | `https://api.id.qeet.in`; https required except for localhost |
 | Auth | `Authorization: ApiKey <key>`; not sent to the OAuth, directory sign-in, agent token and credential verification endpoints |
-| OAuth client auth | `client_secret_post` (the server doesn't form-decode Basic credentials) |
+| OAuth client auth | `client_secret_post` (the server also accepts form-encoded HTTP Basic) |
 | Timeout | 30 000 ms per attempt |
 | Retries | 2, for GET, DELETE, `retrySafe` POSTs and idempotency-keyed requests; after no response, timeout, 408, 429, 500, 502, 503, 504, 409 `idempotency.in_progress`; never `auth.session_revoked` |
 | Backoff | 500 ms doubling to 8 s, equal jitter; `Retry-After` honoured up to 60 s |
