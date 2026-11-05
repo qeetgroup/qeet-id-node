@@ -88,18 +88,19 @@ describe("TokenVerifier", () => {
     await expect(verifier.verify(await sign(key, claims({ aud: "https://mcp.brightleaffoods.in" })))).resolves.toBeTruthy();
   });
 
-  it.each([
-    ["another issuer", { iss: "https://evil.example" }, "invalid_issuer"],
-    ["another audience", { aud: ["https://other-service.example"] }, "invalid_audience"],
-    ["no audience", { aud: undefined }, "invalid_audience"],
-    ["an expired token", { exp: now() - 31 }, "token_expired"],
-    ["a token not valid yet", { nbf: now() + 31 }, "token_not_yet_valid"],
-    ["a token issued in the future", { iat: now() + 31 }, "token_not_yet_valid"],
-    ["no expiry", { exp: undefined }, "malformed_token"],
+  // Times are computed when each case runs, not when the table is built.
+  it.each<[string, () => Record<string, unknown>, string]>([
+    ["another issuer", () => ({ iss: "https://evil.example" }), "invalid_issuer"],
+    ["another audience", () => ({ aud: ["https://other-service.example"] }), "invalid_audience"],
+    ["no audience", () => ({ aud: undefined }), "invalid_audience"],
+    ["an expired token", () => ({ exp: now() - 120 }), "token_expired"],
+    ["a token not valid yet", () => ({ nbf: now() + 120 }), "token_not_yet_valid"],
+    ["a token issued in the future", () => ({ iat: now() + 120 }), "token_not_yet_valid"],
+    ["no expiry", () => ({ exp: undefined }), "malformed_token"],
   ])("refuses %s", async (_name, extra, code) => {
     const key = await signingKey("k1");
     const verifier = new TokenVerifier({ issuer: ISSUER, audience: AUDIENCE, fetch: jwks(() => [key.jwk]).fetch });
-    expect(await codeOf(verifier.verify(await sign(key, claims(extra))))).toBe(code);
+    expect(await codeOf(verifier.verify(await sign(key, claims(extra()))))).toBe(code);
   });
 
   it("allows 30 seconds of clock difference by default, and a configured amount", async () => {
