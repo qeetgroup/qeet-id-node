@@ -1,2 +1,8 @@
-/** This SDK's version, sent in the User-Agent of every request. Kept equal to package.json's `version` (a test checks). */
-export const VERSION = "0.1.0";
+declare const __QEET_ID_SDK_VERSION__: string | undefined;
+
+/**
+ * This SDK's version, sent in the User-Agent of every request. It is
+ * package.json's `version`, written in at build time (tsdown.config.ts), so
+ * the two can't disagree.
+ */
+export const VERSION: string = typeof __QEET_ID_SDK_VERSION__ === "string" ? __QEET_ID_SDK_VERSION__ : "0.0.0-development";

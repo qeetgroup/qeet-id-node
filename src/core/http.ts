@@ -128,7 +128,9 @@ export class HttpClient {
       let response: Response;
       let text: string;
       try {
-        response = await this.fetch(url, { method: request.method, headers, body: payload as RequestInit["body"], signal });
+        // Called unbound: some runtimes' fetch refuses a `this` other than the global object.
+        const fetchImpl = this.fetch;
+        response = await fetchImpl(url, { method: request.method, headers, body: payload as RequestInit["body"], signal });
         text = await response.text();
       } catch (error) {
         throw transportError(error, callerSignal, timeout.signal, timeoutMs);

@@ -178,7 +178,8 @@ export class TokenVerifier {
     this.#lastRefreshAttempt = Date.now();
     let document: { keys?: Jwk[] };
     try {
-      const response = await this.#fetch(this.jwksUrl, {
+      const fetchImpl = this.#fetch; // called unbound, as fetch expects
+      const response = await fetchImpl(this.jwksUrl, {
         headers: { accept: "application/json" },
         signal: AbortSignal.timeout(JWKS_TIMEOUT_MS),
       });
