@@ -381,10 +381,6 @@ Every command is in [CONTRIBUTING.md](CONTRIBUTING.md).
 | 📝 [Changelog](CHANGELOG.md) | What's in each version |
 | 🔒 [Security](SECURITY.md) | Reporting a vulnerability to security@qeet.in |
 
-## 📜 Licence
-
-[MIT](LICENSE) © Qeet Group.
-
 ---
 
 <div align="center">
