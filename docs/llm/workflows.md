@@ -59,9 +59,10 @@ own `deliver` and `sign` functions, never written by hand.
 ```text
 1  CHANGELOG.md: move [Unreleased] under the version being released
 2  bun run verify
-3  merge to main — release.yml takes the latest vX.Y.Z tag, bumps it (patch unless the manual run
-   asks for minor or major), writes it into package.json, runs the gate, publishes to npm with
-   provenance, then commits the bump and tags it
+3  merge develop into main (pull request), which publishes nothing
+4  run release.yml on main by hand, choosing patch, minor or major: it takes the latest vX.Y.Z
+   tag, bumps it, writes it into package.json, runs the gate, publishes to npm with provenance,
+   then commits the bump and tags it
 ```
 
 `VERSION` is written in from package.json at build time, so it always matches the published package.

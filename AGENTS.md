@@ -70,7 +70,13 @@ Also `bun run dev`, `bun run test:watch`, `bun run test:coverage`, `bun run lint
 
 `ci.yml` on Node.js 22, 24 and 26: install, typecheck, build, tests with coverage, package checks.
 `lint.yml`: `bun run check`. `security.yml`: `bun audit --audit-level=high` and gitleaks. `codeql.yml`.
-`release.yml`: on push to `main`, publishes to npm with provenance and tags the version.
+`release.yml`: run by hand on `main` (patch, minor or major); publishes to npm with provenance and tags the version. Merging into `main` never publishes.
+
+## Branches
+
+Two long-lived branches: `develop`, where work lands, and `main`, what is released. Changes reach
+`main` only by a pull request from `develop`. There are no release branches: a version is a
+`vX.Y.Z` tag, made when `release.yml` is run on `main`.
 
 ## Before you finish
 
