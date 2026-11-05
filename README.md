@@ -1,34 +1,58 @@
-# Qeet ID Node.js SDK
+<div align="center">
 
-The official server-side SDK for Qeet ID, the passkeys-first identity platform.
-Manage an organisation's users, groups, roles and connections, check permissions, verify webhooks
-and access tokens, and run OAuth flows, from Node.js.
+# 🔐 Qeet ID for Node.js
 
-- Typed: every request, response, error code and event.
-- Safe by default: retries only what can't happen twice, never logs a credential, verifies webhooks
-  and tokens strictly.
-- No runtime dependencies. ES module and CommonJS builds.
+**The server-side SDK for Qeet ID: manage an organisation's people and access, verify webhooks and access tokens, and run OAuth flows from Node.js.**
 
+[![Node.js](https://img.shields.io/badge/Node.js-22.12%2B-5FA04E?logo=nodedotjs&logoColor=white)](#-install)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](#-typescript-and-modules)
+[![ESM + CJS](https://img.shields.io/badge/modules-ESM%20%2B%20CJS-F7DF1E)](#-typescript-and-modules)
+[![Runtime dependencies](https://img.shields.io/badge/runtime%20dependencies-0-2EA043)](package.json)
+[![Tests](https://img.shields.io/badge/tests-427%20passing-2EA043)](test)
+
+[📖 Docs](#-learn-more) · [🚀 Quick start](#-quick-start) · [🧩 API](#-resources) · [📝 Changelog](CHANGELOG.md) · [🏗️ Architecture](docs/architecture/ARCHITECTURE.md)
+
+</div>
+
+> [!IMPORTANT]
 > Use it on servers only. It authenticates with a secret API key that must never reach a browser.
 
-## Contents
+## 📦 What's inside
 
-[Install](#install) · [Quick start](#quick-start) · [Configuration](#configuration) ·
-[Resources](#resources) · [Errors](#errors) · [Retries and timeouts](#retries-and-timeouts) ·
-[Idempotency](#idempotency) · [Pagination](#pagination) · [Webhooks](#webhooks) ·
-[Access tokens](#access-tokens) · [OAuth](#oauth) · [Directory sign-in](#directory-sign-in) ·
-[Logging](#logging) · [TypeScript and modules](#typescript-and-modules) · [Versioning](#versioning)
+| | |
+|:--|:--|
+| 🧭 **Typed client** | One `QeetID` client with 38 resource namespaces and **266 API calls**, each checked against the server's OpenAPI documents. Every request, response and error code is typed |
+| 🚨 **Typed errors** | A `QeetIDError` hierarchy: one class per HTTP status, `SessionRevokedError`, `OAuthError`, `NetworkError`, `TimeoutError`. Each carries a stable `code` and the `requestId` |
+| 🔁 **Safe retries** | Exponential backoff with jitter and `Retry-After`, only for requests that can't act twice. Idempotency keys sent automatically on the nine creates the API makes idempotent |
+| 📄 **Pagination** | `for await` walks every item across pages; whole lists come as `{ data, truncated }` |
+| 🪝 **Webhooks** | Timestamped HMAC-SHA256 verification, constant-time, two secrets during a rotation, a five-minute replay window, typed events |
+| 🔑 **Access tokens** | Local ES256 verification against the issuer's signing keys, with a required issuer and audience |
+| 🤝 **OAuth** | Client credentials (with `expires_in`), authorization code, refresh, token exchange, device and CIBA grants, introspection, revocation, a token guard |
+| 🪶 **Lean** | No runtime dependencies (`fetch`, Web Crypto and `node:crypto` only), ES module and CommonJS builds, one file per module for tree shaking |
 
-## Install
+## 🔗 How it fits
+
+```mermaid
+flowchart LR
+    subgraph you["🖥️ Your server"]
+        SDK["@qeet-id/node"]
+    end
+    SDK -->|"ApiKey · retries · idempotency keys"| API["☁️ api.id.qeet.in"]
+    API -->|"signed webhooks"| SDK
+    App["📱 Your apps"] -->|"access tokens"| SDK
+    SDK -.->|"JWKS, cached"| API
+```
+
+## 📥 Install
+
+Node.js 22.12 or later; tested on 22, 24 and 26.
 
 ```sh
 npm install @qeet-id/node
 # or: bun add @qeet-id/node · pnpm add @qeet-id/node · yarn add @qeet-id/node
 ```
 
-Requires Node.js 22.12 or later (Node.js 22, 24 and 26 are tested).
-
-## Quick start
+## 🚀 Quick start
 
 Create an API key in the Qeet ID console and keep it in a secret store.
 
@@ -51,31 +75,28 @@ const allowed = await qeetId.permissions.check({ user_id: user.id, tenant_id: te
 
 Create one client per process and share it: it is safe for concurrent use.
 
-## Configuration
+## ⚙️ Configuration
 
 ```ts
 const qeetId = new QeetID({
-  apiKey: process.env.QEET_ID_API_KEY, // sent as "Authorization: ApiKey <key>"
-  baseUrl: "https://api.id.qeet.in",   // the default; https only, except for localhost
-  timeoutMs: 30_000,                   // per attempt, response body included
-  maxRetries: 2,                       // 0 turns retries off
-  appInfo: { name: "brightleaf-onboarding", version: "1.4.0" }, // added to the User-Agent
-  headers: { "x-correlation-id": "…" },                        // sent on every request
-  logger: console,                     // optional; see Logging
-  fetch: myFetch,                      // optional; for a proxy, custom TLS or tests
+  apiKey: process.env.QEET_ID_API_KEY,
+  timeoutMs: 30_000,
+  maxRetries: 2,
+  appInfo: { name: "brightleaf-onboarding", version: "1.4.0" },
+  logger: console,
 });
 ```
 
 | Option | Default | |
-| --- | --- | --- |
-| `apiKey` | none | Needed by every management call. The OAuth token endpoints, directory sign-in and credential verification authenticate otherwise and work without it. |
-| `baseUrl` | `https://api.id.qeet.in` | Must be `https`; plain `http` is allowed only for `localhost` and `*.localhost`. |
-| `timeoutMs` | `30000` | Each attempt's limit. |
-| `maxRetries` | `2` | Retries after a transient failure, for retry-safe requests only. |
-| `headers` | `{}` | Can't replace `Authorization`, `Accept`, `Content-Type`, `User-Agent` or `Idempotency-Key`. |
-| `appInfo` | none | `{ name, version?, url? }`, prepended to the User-Agent. |
-| `logger` | none | Any object with `debug`, `info`, `warn`, `error`. |
-| `fetch` | global `fetch` | |
+|:--|:--|:--|
+| `apiKey` | none | Sent as `Authorization: ApiKey <key>`. Every management call needs it; the OAuth token endpoints, directory sign-in and credential verification work without it |
+| `baseUrl` | `https://api.id.qeet.in` | Must be `https`; plain `http` only for `localhost` and `*.localhost` |
+| `timeoutMs` | `30000` | Each attempt's limit, response body included |
+| `maxRetries` | `2` | Retries after a transient failure, for retry-safe requests only; `0` turns them off |
+| `headers` | `{}` | Sent on every request; can't replace `Authorization`, `Accept`, `Content-Type`, `User-Agent` or `Idempotency-Key` |
+| `appInfo` | none | `{ name, version?, url? }`, put in front of the User-Agent |
+| `logger` | none | Any object with `debug`, `info`, `warn`, `error` (`console` fits) |
+| `fetch` | global `fetch` | For a proxy, custom TLS or tests |
 
 Every method takes an options object last, overriding the client for that call:
 
@@ -83,18 +104,18 @@ Every method takes an options object last, overriding the client for that call:
 await qeetId.users.get(userId, { timeoutMs: 5_000, maxRetries: 0, signal: AbortSignal.timeout(8_000) });
 ```
 
-## Resources
+## 🧭 Resources
 
-Methods are grouped by namespace. Identifiers come first, then the request body, then options.
-Request and response objects keep the API's field names (`display_name`, `created_at`).
+Identifiers come first, then the request body, then options. Request and response objects keep the API's
+field names (`display_name`, `created_at`).
 
 | Area | Namespaces |
-| --- | --- |
-| Identity | `tenants` (the organisation) · `domains` · `users` · `groups` · `invitations` · `branding` |
-| Access | `roles` · `permissions` · `relationships` (ReBAC tuples) · `decisions` (OpenID AuthZEN) · `authPolicies` · `securityPolicies` · `ipRules` · `threatDetection` (bots, risk, anomalies) |
-| Federation | `oauth` · `applications` (OAuth/OpenID clients and RFC 8707 resources) · `servicePrincipals` · `samlConnections` · `samlServiceProviders` · `ldapConnections` · `scim` · `socialProviders` · `adminPortalLinks` |
-| Developer | `apiKeys` · `agents` · `verifiableCredentials` · `authHooks` · `webhooks` · `secrets` · `tokenVault` |
-| Operations | `auditLogs` · `analytics` · `billing` · `gdpr` · `emailTemplates` · `retention` · `logSinks` · `rateLimits` |
+|:--|:--|
+| 👥 **Identity** | `tenants` (the organisation) · `domains` · `users` · `groups` · `invitations` · `branding` |
+| 🛡️ **Access** | `roles` · `permissions` · `relationships` (ReBAC tuples) · `decisions` (OpenID AuthZEN) · `authPolicies` · `securityPolicies` · `ipRules` · `threatDetection` (bots, risk, anomalies) |
+| 🌐 **Federation** | `oauth` · `applications` (OAuth/OpenID clients and RFC 8707 resources) · `servicePrincipals` · `samlConnections` · `samlServiceProviders` · `ldapConnections` · `scim` · `socialProviders` · `adminPortalLinks` |
+| 🛠️ **Developer** | `apiKeys` · `agents` · `verifiableCredentials` · `authHooks` · `webhooks` · `secrets` · `tokenVault` |
+| 📊 **Operations** | `auditLogs` · `analytics` · `billing` · `gdpr` · `emailTemplates` · `retention` · `logSinks` · `rateLimits` |
 
 ```ts
 const page = await qeetId.auditLogs.list(tenantId, { action: "user.deleted", from: "2026-11-01T00:00:00Z" });
@@ -103,40 +124,36 @@ const { secret } = await qeetId.webhooks.rotateSecret(tenantId, webhookId);
 const { data: secrets, truncated } = await qeetId.secrets.list(tenantId);
 ```
 
-The SDK covers the calls an API key may make. A person's own account (their sessions, factors,
-passkeys, email changes) is managed by that person through the hosted pages, not from a server.
+The SDK covers the calls an API key may make. A person's own account (their sessions, factors, passkeys,
+email changes) is theirs to manage through the hosted pages. What isn't wrapped yet is listed in
+[docs/FUTURE.md](docs/FUTURE.md).
 
-## Errors
+## 🚨 Errors
 
-Every failure is thrown. Errors the SDK makes are `QeetIDError`s:
+Every failure is thrown. Branch on the class or on `code`, never on `message`.
 
-```text
-QeetIDError
-├── ApiError                     the API answered with an error
-│   ├── BadRequestError          400
-│   ├── AuthenticationError      401
-│   │   └── SessionRevokedError  401 auth.session_revoked
-│   ├── PermissionDeniedError    403
-│   ├── NotFoundError            404
-│   ├── ConflictError            409
-│   ├── ValidationError          422 (see fields)
-│   ├── RateLimitError           429 (see retryAfterSeconds)
-│   ├── InternalServerError      5xx
-│   │   └── ServiceUnavailableError 503 (see retryAfterSeconds)
-│   └── OAuthError               an OAuth token endpoint's RFC 6749 error
-├── NetworkError                 no response
-│   └── TimeoutError             no response in time
-├── WebhookVerificationError
-└── TokenVerificationError
-```
+| Class | When | Worth reading |
+|:--|:--|:--|
+| `BadRequestError` | 400 | `code`, `detail` |
+| `AuthenticationError` | 401 | `code` |
+| ↳ `SessionRevokedError` | 401 `auth.session_revoked` | sign in again; never retried |
+| `PermissionDeniedError` | 403 | `code` |
+| `NotFoundError` | 404 | |
+| `ConflictError` | 409 | `code`, such as `idempotency.outcome_unknown` |
+| `ValidationError` | 422 | `fields`: each field's `code` and `message` |
+| `RateLimitError` | 429 | `retryAfterSeconds` |
+| `InternalServerError` | 5xx | `requestId` |
+| ↳ `ServiceUnavailableError` | 503 | `retryAfterSeconds` |
+| `OAuthError` | an OAuth token endpoint refused | `code` is the RFC 6749 `error`, such as `invalid_grant` |
+| `NetworkError` · `TimeoutError` | no response, or none in time | `cause` |
+| `WebhookVerificationError` | a delivery failed verification | `code`, such as `signature_mismatch` |
+| `TokenVerificationError` | an access token failed verification | `code`, such as `token_expired` |
 
-An `ApiError` has `status`, `code` (a stable string such as `user.domain_managed_elsewhere`: branch on
-it, never on `message`), `message` (safe to show a person), `requestId` (quote it to support),
-`detail`, `fields` (per-field problems on a 422), `metadata`, `retryable` (the server's hint),
-`retryAfterSeconds` and `headers`.
+All of them extend `QeetIDError`; the API ones extend `ApiError`, which also has `status`, `requestId`
+(quote it to support), `metadata`, `retryable` and `headers`.
 
 ```ts
-import { ConflictError, NotFoundError, RateLimitError, ValidationError } from "@qeet-id/node";
+import { ConflictError, RateLimitError, ValidationError } from "@qeet-id/node";
 
 try {
   await qeetId.users.create({ tenant_id: tenantId, email });
@@ -153,41 +170,31 @@ try {
 }
 ```
 
-A wrong argument in your code (an empty id, a malformed idempotency key) is a `TypeError` or
-`RangeError`, not a `QeetIDError`. A cancelled call rejects with the signal's reason (an
-`AbortError` by default).
+A mistake in your own arguments (an empty id, a malformed idempotency key) is a `TypeError` or `RangeError`.
+A cancelled call rejects with the signal's reason. `instanceof` works even when both the CommonJS and the ES
+module build of this package are loaded in one process.
 
-`instanceof` works even when both the CommonJS and the ES module build of this package are loaded in
-one process.
+## 🔁 Retries & timeouts
 
-## Retries and timeouts
+| | |
+|:--|:--|
+| ✅ **Retried** | `GET` and `DELETE`; POSTs that change nothing (permission and relationship checks, AuthZEN evaluations, previews, introspection); requests carrying an `Idempotency-Key` |
+| ⚡ **After** | no response, a timeout, `408`, `429`, `500`, `502`, `503`, `504`, `409 idempotency.in_progress` |
+| ⛔ **Never** | `PUT`, `PATCH` and other POSTs; OAuth grants (single-use); directory sign-in (counts toward the lockout); `401 auth.session_revoked`, whatever the server's `retryable` hint says |
+| ⏱️ **Waits** | the server's `Retry-After` up to 60 s (a longer one is thrown as is), otherwise 0.5 s doubling to 8 s with jitter |
 
-A request is retried, up to `maxRetries` times, only when repeating it can't do anything twice:
-
-- **Which requests:** `GET` and `DELETE`; POSTs that change nothing (permission and relationship
-  checks, AuthZEN evaluations, previews, introspection); and requests carrying an `Idempotency-Key`.
-  `PUT`, `PATCH` and other POSTs are never retried, and neither are OAuth grants or directory
-  sign-ins.
-- **Which failures:** no response, a timeout, `408`, `429`, `500`, `502`, `503`, `504`, and `409
-  idempotency.in_progress`.
-- **Never:** `401 auth.session_revoked`. The session has ended; only a new sign-in helps, whatever
-  the server's `retryable` hint says.
-- **How long:** the server's `Retry-After` when it sends one (up to 60 seconds; a longer one is thrown
-  as is), otherwise exponential backoff from 0.5 s to 8 s with jitter.
-
-Each attempt has its own `timeoutMs`. Use an `AbortSignal` to bound the whole call, retries included:
+Each attempt has its own `timeoutMs`. An `AbortSignal` bounds the whole call, retries included:
 
 ```ts
 await qeetId.users.get(userId, { signal: AbortSignal.timeout(10_000) });
 ```
 
-## Idempotency
+### 🔂 Idempotency
 
-The API makes nine calls idempotent: `users.create`, `groups.create`, `invitations.create`,
-`servicePrincipals.create`, `apiKeys.create`, `agents.create`, `webhooks.create`, `billing.checkout`
-and `billing.payInvoice`. The SDK sends each with an `Idempotency-Key`, generating one per call, so its
-own retries never create twice. Pass your own key to make retries across calls, deployments or
-processes safe too:
+`users.create`, `groups.create`, `invitations.create`, `servicePrincipals.create`, `apiKeys.create`,
+`agents.create`, `webhooks.create`, `billing.checkout` and `billing.payInvoice` always send an
+`Idempotency-Key`: one generated per call, so the SDK's own retries never create twice. Pass your own to make
+retries across calls, deployments or processes safe too:
 
 ```ts
 await qeetId.users.create(
@@ -196,16 +203,14 @@ await qeetId.users.create(
 );
 ```
 
-The API keeps an answer for 24 hours. The same key with a different body is refused (`422
-idempotency.key_reused`); a key whose first request is still running gets `409
-idempotency.in_progress` (retried automatically); a key whose first request was interrupted gets
-`409 idempotency.outcome_unknown`: check whether it took effect before trying again with a new key.
+The API keeps the answer for 24 hours. The same key with another body is refused (`422
+idempotency.key_reused`); `409 idempotency.outcome_unknown` means the first request was interrupted: check
+whether it took effect before trying again with a new key.
 
-## Pagination
+## 📄 Pagination
 
-Lists the API pages (users, audit log, consent grants, SCIM users and groups, anomalies, decisions,
-webhook deliveries, relationship objects) return a `PagePromise`. Await it for one page, or iterate it
-for every item; later pages are fetched as you go:
+Paged lists (users, audit log, consent grants, SCIM users and groups, anomalies, decisions, webhook
+deliveries, relationship objects) return a `PagePromise`: iterate it for every item, or await it for one page.
 
 ```ts
 for await (const user of qeetId.users.list({ status: "active", limit: 100 })) {
@@ -213,16 +218,14 @@ for await (const user of qeetId.users.list({ status: "active", limit: 100 })) {
 }
 
 const page = await qeetId.users.list({ limit: 50 });
-page.data;          // this page's users
-page.nextCursor;    // pass as `cursor` later, or:
+page.data;                                  // this page
 if (page.hasNextPage()) await page.getNextPage();
 for await (const p of page.iterPages()) console.log(p.data.length);
 ```
 
-Other lists come whole, as `{ data, truncated }`. `truncated` is `true` when the API capped the list
-and more items exist than `data` holds.
+Other lists come whole as `{ data, truncated }`; `truncated` is `true` when the API capped the list.
 
-## Webhooks
+## 🪝 Webhooks
 
 Each delivery is a signed POST whose body is an event:
 
@@ -230,10 +233,9 @@ Each delivery is a signed POST whose body is an event:
 { "id": "…", "type": "user.created", "tenant_id": "…", "occurred_at": "2026-11-05T09:30:00Z", "data": { … } }
 ```
 
-`X-Qeet-Signature` is `sha256=` and the hex HMAC-SHA256, keyed by the subscription's secret, of
-`X-Qeet-Timestamp`, `.` and the raw body. `constructWebhookEvent` checks it in constant time, refuses
-a delivery signed more than five minutes from now (`toleranceSeconds` changes that) and returns the
-typed event. Always pass the **raw** body: a parsed and re-serialised one won't match.
+`constructWebhookEvent` checks `X-Qeet-Signature` (`sha256=` and the HMAC-SHA256 of `X-Qeet-Timestamp`, `.`
+and the raw body) in constant time, refuses a delivery signed more than five minutes from now, and returns
+the typed event. Always pass the **raw** body: a parsed and re-serialised one won't match.
 
 **Express**
 
@@ -259,26 +261,23 @@ app.post("/webhooks/qeet-id", express.raw({ type: "application/json" }), async (
 
 ```ts
 export async function POST(request: Request) {
-  const body = await request.text();
-  const event = constructWebhookEvent(body, request.headers, process.env.QEET_ID_WEBHOOK_SECRET!);
+  const event = constructWebhookEvent(await request.text(), request.headers, process.env.QEET_ID_WEBHOOK_SECRET!);
   // …
   return new Response(null, { status: 204 });
 }
 ```
 
-- **Rotating the secret:** `webhooks.rotateSecret()` returns a new secret; for 24 hours deliveries are
-  signed with both. Pass both meanwhile: `constructWebhookEvent(body, headers, [newSecret, oldSecret])`.
-- **Duplicates:** an event's `id` is the same in every delivery of it, retries included.
-- **Unknown events:** `event.type` may be newer than this SDK; ignore what you don't handle.
-  `WEBHOOK_EVENT_TYPES` lists the events this version knows.
-- **Testing your handler:** `signWebhookPayload(body, secret)` signs a body the way Qeet ID does.
-- Don't trust `X-Qeet-Event`: it isn't signed. Read `event.type`.
+**node:http** — see [examples/webhook-receiver.ts](examples/webhook-receiver.ts).
 
-`WebhookVerificationError.code` says why a delivery was refused: `missing_secret`,
-`missing_signature`, `missing_timestamp`, `invalid_timestamp`, `timestamp_outside_tolerance`,
-`invalid_signature_header`, `signature_mismatch` or `invalid_payload`.
+| | |
+|:--|:--|
+| 🔄 **Rotating the secret** | `webhooks.rotateSecret()` returns a new secret; for 24 hours deliveries carry both signatures. Pass both meanwhile: `constructWebhookEvent(body, headers, [newSecret, oldSecret])` |
+| 🧾 **Duplicates** | an event's `id` is the same in every delivery of it, retries included |
+| 🆕 **Unknown events** | `event.type` may be newer than this SDK; ignore what you don't handle. `WEBHOOK_EVENT_TYPES` lists those this version knows |
+| 🧪 **Testing** | `signWebhookPayload(body, secret)` signs a body the way Qeet ID does |
+| ⚠️ **`X-Qeet-Event`** | isn't signed: read `event.type` instead |
 
-## Access tokens
+## 🔑 Verifying access tokens
 
 To accept Qeet ID access tokens in your own API, verify them locally against the issuer's signing keys:
 
@@ -291,15 +290,13 @@ const claims = await verifier.verify(bearerToken); // throws TokenVerificationEr
 claims.sub; claims.tenant_id; claims.scope;
 ```
 
-Or configure it directly: `new TokenVerifier({ issuer, audience, jwksUrl })`. Both `issuer` and
-`audience` are required: the audience is your service's RFC 8707 resource identifier (registered with
-`applications.resources.create`), or the platform audience. The verifier accepts ES256 only, needs a
-known `kid`, checks the signature, `iss`, `aud`, `exp`, `nbf` and `iat` (with 30 seconds of clock
-tolerance, `clockToleranceSeconds`), caches the keys for five minutes and refetches them for an unknown
-`kid` at most every 30 seconds.
+Or configure it directly with `new TokenVerifier({ issuer, audience, jwksUrl })`. Both `issuer` and `audience`
+are required. The verifier accepts ES256 only, needs a known `kid`, checks `iss`, `aud`, `exp`, `nbf` and `iat`
+with 30 seconds of clock tolerance (`clockToleranceSeconds`), caches the keys for five minutes, and refetches
+them for an unknown `kid` at most every 30 seconds.
 
-A token verified offline stays valid until it expires, even if its session was revoked. Where
-revocation must take effect at once, introspect instead:
+A token verified offline stays valid until it expires, even if its session was revoked. Where revocation must
+take effect at once, introspect instead:
 
 ```ts
 const guard = qeetId.oauth.createTokenGuard({
@@ -310,7 +307,7 @@ const guard = qeetId.oauth.createTokenGuard({
 const claims = await guard.verify(bearerToken, ["files:read"]); // AuthenticationError or PermissionDeniedError
 ```
 
-## OAuth
+## 🤝 OAuth
 
 ```ts
 // Machine-to-machine: a service principal's token (POST /v1/oauth/token).
@@ -324,20 +321,21 @@ await qeetId.oauth.tokenExchangeGrant({ client_id, client_secret, subject_token,
 await qeetId.oauth.deviceCodeGrant({ client_id, device_code });
 await qeetId.oauth.cibaGrant({ client_id, client_secret, auth_req_id });
 
-await qeetId.oauth.introspect(token, { client_id, client_secret });
+await qeetId.oauth.introspect(accessToken, { client_id, client_secret });
 await qeetId.oauth.revoke(refreshToken, { client_id, client_secret });
 ```
 
-The token endpoints answer errors in the RFC 6749 shape, thrown as `OAuthError` with `code` set to the
-RFC `error`: `invalid_request`, `invalid_client` (status 401), `invalid_grant`, `unauthorized_client`,
-`unsupported_grant_type`, `invalid_scope`, `invalid_target`, and for polling `authorization_pending`,
-`slow_down`, `access_denied` and `expired_token`. Grants are never retried. Client credentials are sent
-in the form body and never logged.
+The token endpoints' errors are thrown as `OAuthError`, with `code` set to the RFC 6749 `error`:
+`invalid_request`, `invalid_client` (status 401), `invalid_grant`, `unauthorized_client`,
+`unsupported_grant_type`, `invalid_scope`, `invalid_target`, and while polling `authorization_pending`,
+`slow_down`, `access_denied` and `expired_token`. Grants are never retried. Client credentials travel in the
+form body and are never logged. A token cache for machine-to-machine calls is in
+[examples/machine-to-machine.ts](examples/machine-to-machine.ts).
 
-## Directory sign-in
+## 🗂️ Directory sign-in
 
-`ldapConnections.authenticate` signs a person in with their directory password. The result is either
-tokens or a second-factor challenge:
+`ldapConnections.authenticate` signs a person in with their directory password. The result is tokens, or a
+second-factor challenge:
 
 ```ts
 const result = await qeetId.ldapConnections.authenticate(connectionId, { username, password });
@@ -347,30 +345,50 @@ if (result.type === "mfa_challenge") {
 startSession(result.tokens);
 ```
 
-## Logging
+## 📝 Logging
 
-Pass a `logger` (`console`, or any object with `debug`, `info`, `warn` and `error`) to see each
-request, response and retry. Messages carry the method, path, attempt, status, duration and request
-id; never the API key, client secrets, query strings, headers or bodies.
+Pass a `logger` to see each request, response and retry. Messages carry the method, path, attempt, status,
+duration and request id; never the API key, client secrets, query strings, headers or bodies.
 
-## TypeScript and modules
+## 🧩 TypeScript and modules
 
-The package ships ES module and CommonJS builds with matching type declarations; `import` and
-`require` both work. Types are exported for every request, response and error code:
+ES module and CommonJS builds with matching declarations: `import` and `require` both work. Types are exported
+for every request, response and error code:
 
 ```ts
 import type { User, UserListParams, WebhookEvent, OAuthErrorCode } from "@qeet-id/node";
 ```
 
-## Versioning
+## 🔨 Building
 
-The SDK follows [Semantic Versioning](https://semver.org). Changes are listed in
-[CHANGELOG.md](CHANGELOG.md). `VERSION` exports the version, which is also sent in the User-Agent.
+```sh
+bun install
+bun run verify   # typecheck, Biome, tests, build, publint and Are the Types Wrong
+```
 
-## Security
+Every command is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Report vulnerabilities privately to security@qeet.in; see [SECURITY.md](SECURITY.md).
+## 📚 Learn more
 
-## License
+| | |
+|:--|:--|
+| 🧪 [Examples](examples) | Webhook receiver, protecting an API, machine-to-machine tokens, managing users |
+| 🏗️ [Architecture](docs/architecture/ARCHITECTURE.md) | How a request travels from a method to the API and back |
+| 🧠 [Design decisions](docs/design-decisions) | Namespaces, errors, wire names, retries, the dual package |
+| 📐 [Engineering practices](docs/engineering-practices.md) | The practices this SDK follows, with their sources |
+| 🗺️ [What's not covered yet](docs/FUTURE.md) | API areas still to wrap, and those left out on purpose |
+| 🤝 [Contributing](CONTRIBUTING.md) | Setting up, conventions, tests |
+| 📝 [Changelog](CHANGELOG.md) | What's in each version |
+| 🔒 [Security](SECURITY.md) | Reporting a vulnerability to security@qeet.in |
 
-[MIT](LICENSE)
+## 📜 Licence
+
+[MIT](LICENSE) © Qeet Group.
+
+---
+
+<div align="center">
+
+Made with 🧡 by Qeet Group · [⬆️ Back to top](#-qeet-id-for-nodejs)
+
+</div>
