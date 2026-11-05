@@ -1,4 +1,8 @@
-// The released version of this SDK, sent in the User-Agent header on every
-// request. Kept in sync with package.json's "version" field manually (no
-// build-time injection) — the same precedent as the Go SDK's internal/version.
-export const SDK_VERSION = "0.1.0";
+declare const __QEET_ID_SDK_VERSION__: string | undefined;
+
+/**
+ * This SDK's version, sent in the User-Agent of every request. It is
+ * package.json's `version`, written in at build time (tsdown.config.ts), so
+ * the two can't disagree.
+ */
+export const VERSION: string = typeof __QEET_ID_SDK_VERSION__ === "string" ? __QEET_ID_SDK_VERSION__ : "0.0.0-development";

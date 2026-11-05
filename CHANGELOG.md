@@ -6,62 +6,106 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-The library is unpublished, so these breaking changes ship without a major version (QTID-540).
+A rework of the whole SDK against the API as it is today. The package has never been published, so
+these breaking changes ship without a major version.
+
+### Added
+
+- **Typed errors.** `QeetIDError` is the base of every error the SDK throws. `ApiError` carries
+  `status`, `code`, `message`, `requestId`, `detail`, `fields`, `metadata`, `retryable`,
+  `retryAfterSeconds` and `headers`, with a subclass per status: `BadRequestError`,
+  `AuthenticationError`, `SessionRevokedError` (401 `auth.session_revoked`), `PermissionDeniedError`,
+  `NotFoundError`, `ConflictError`, `ValidationError` (422), `RateLimitError`, `InternalServerError`
+  and `ServiceUnavailableError`. `OAuthError` for the token endpoints' RFC 6749 errors.
+  `NetworkError` and `TimeoutError` when no response came. `instanceof` works across the CommonJS
+  and ES module copies of the package.
+- **Retries that can't do anything twice.** Exponential backoff with jitter, honouring `Retry-After`
+  up to 60 s, for retry-safe requests only: `GET`, `DELETE`, read-only POSTs and requests carrying an
+  `Idempotency-Key`; after no response, a timeout, 408, 429, 500, 502, 503, 504 or `409
+  idempotency.in_progress`. A 401 `auth.session_revoked` is never retried.
+- **Idempotency keys** on the nine calls the API makes idempotent (`users.create`, `groups.create`,
+  `invitations.create`, `servicePrincipals.create`, `apiKeys.create`, `agents.create`,
+  `webhooks.create`, `billing.checkout`, `billing.payInvoice`): generated per call, or the caller's
+  own through `idempotencyKey`.
+- **Per-call options** on every method: `signal`, `timeoutMs`, `maxRetries`, `headers`.
+- **Pagination:** paged lists return a `PagePromise` that is awaitable (one `CursorPage`) and
+  async-iterable (every item). Whole lists return `{ data, truncated }`; `truncated` reports a list the
+  API capped.
+- **Webhook verification** of the timestamped signature: `constructWebhookEvent`,
+  `verifyWebhookSignature`, `signWebhookPayload`, `WEBHOOK_HEADERS`, `WEBHOOK_EVENT_TYPES` and the
+  `WebhookEvent` type. Several secrets during a rotation; a five-minute replay window by default.
+- **Access-token verification:** `TokenVerifier` and `createTokenVerifierFromDiscovery`, with a
+  required issuer and audience.
+- **OAuth:** `clientCredentialsGrant` (with `expires_in` and `expires_at`), `authorizationCodeGrant`,
+  `refreshTokenGrant`, `tokenExchangeGrant`, `deviceCodeGrant`, `cibaGrant`, `deviceAuthorization`,
+  `backchannelAuthentication`, and `grants.revokeMany`.
+- **Calls the API gained:** user sessions, security posture and access; role update, delete,
+  permission sets and holders; group update; invitation resend; domain SSO and provisioning switches;
+  webhook update, enable, secret rotation, event catalogue, failed-delivery retry and delivery
+  attempts; API key, agent and service-principal secret rotation; `agents.resumeAll`;
+  service-principal enable; application auth failures and RFC 8707 resources; SAML import, metadata,
+  certificates, group mappings and service-provider assignments; LDAP group mappings; SCIM tokens and
+  groups; social provider update and delete; AuthZEN batch evaluations and the decision log;
+  auth-policy usage; audit anomalies and verification status; analytics ranges; billing profile,
+  payment method, invoice payment and entitlements; email template test sends; log-sink tests.
+- `appInfo` and `logger` client options; `VERSION`, `DEFAULT_BASE_URL`, `DEFAULT_TIMEOUT_MS` and
+  `DEFAULT_MAX_RETRIES` exports.
 
 ### Changed
 
-- **Requires Node.js 22 or later** (was 18.17). Node 18 and 20 are end-of-life, and the test
-  toolchain no longer runs on them. The build targets `node22`; CI tests on Node 22, 24 and 26.
-- **Built with bun and Biome.** bun replaces pnpm (`bun.lock`, `packageManager: bun@1.4.3`), and
-  Biome replaces ESLint and Prettier for linting and formatting (`biome.json`). `bun run verify` is
-  the gate: typecheck, Biome check, tests and build. Publishing still uses npm, for provenance. Every
-  dev dependency is on its latest release (vitest 5, tsup 9, @types/node 26). TypeScript is pinned
-  to 6, because tsup's declaration build needs the compiler API that TypeScript 7 no longer ships.
-  `bun audit` reports no vulnerabilities; under pnpm the dev toolchain had 21 high and critical
-  advisories. No runtime dependency was added: the package still has none.
+- **Resources renamed and regrouped** after the API's five areas, without a `Service` suffix and with
+  acronyms as words: `organizations` → `tenants`, `oidc` → `applications`, `saml` → `samlConnections`,
+  `samlProviders` → `samlServiceProviders`, `ldap` → `ldapConnections`, `social` → `socialProviders`,
+  `credentials` → `verifiableCredentials`, `vault` → `secrets`, `adminLinks` → `adminPortalLinks`,
+  `authPolicy` → `authPolicies`, `policy` → `securityPolicies`, and `botDetection`, `riskSettings` and
+  `auditLogs.anomalies` (the sign-in anomalies) → `threatDetection`. Input types are named
+  `<Resource><Action>Params`.
+- **Request and response types follow the API documents**, field by field (users, tenants, domains,
+  groups, roles, applications, SAML, LDAP, SCIM, social providers, agents, webhooks, secrets, audit,
+  billing, GDPR, email templates, rate limits and more).
+- **`invitations.create`** returns `{ invite }` with its `delivery`; the invitation's token is no
+  longer returned.
+- **`ldapConnections.authenticate`** returns `{ type: "tokens", tokens }` or
+  `{ type: "mfa_challenge", challenge }`, is never retried, and sends no API key.
+- **OAuth token exchange** posts to `/v1/oauth/token-code`; `/v1/oauth/token` serves
+  `client_credentials` only. OAuth calls take snake_case parameters and send client credentials in
+  the form body.
+- **`client.sessions.verify()`** is replaced by `TokenVerifier`, which returns the token's claims as
+  they are on the wire and requires an issuer and an audience.
+- **`constructEvent(payload, signature, event, secret)`** is replaced by
+  `constructWebhookEvent(payload, headers, secret, options)`.
+- **`TokenGuard`** is created with `oauth.createTokenGuard({ audience, client_id, client_secret })`;
+  a token without an audience is always refused (`allowAnyAudience` is gone).
+- Default timeout 10 s → 30 s per attempt. `userAgent` option → `appInfo`.
+- The base URL must use https, except for localhost.
+- Arguments are checked with `TypeError`/`RangeError`; `ValidationError` now means a 422 from the API.
+- Requires Node.js 22.12 or later. Built with tsdown into one file per module, ES module and CommonJS;
+  checked with publint and Are the Types Wrong. TypeScript 7, Vitest 5.1, Biome 2.6.
 
-### Security
+### Removed
 
-- **The token guard checks the audience** (QTID-537). `client.oauth.verify(token, scope)` is
-  replaced by `client.oauth.tokenGuard({ audience, clientId, clientSecret }).verify(token, scope)`.
-  A token whose `aud` (a string or a list) doesn't include the guard's audience is refused with
-  401 `invalid_token` "audience mismatch", as is one with no `aud` unless `allowAnyAudience` is
-  set; creating a guard without an audience throws. A token issued for one service was accepted by
-  every other service using the guard.
-
-- **The raw vault token is no longer the easy choice** (QTID-538). `tokenVault.getAccessToken()` is
-  `@deprecated` (shown in editors), naming the brokered `tokenVault.call()` that replaces it once the
-  platform offers it (QTID-218), and it emits one `QEETID_RAW_VAULT_TOKEN` `DeprecationWarning` per
-  process. It still works. Removal: the first release after brokered calls ship, the same point as
-  the Go SDK (QTID-246).
+- Calls an API key can't make: listing and creating tenants, a user's own email and phone
+  verification, the token vault's own-account calls (`listGrants`, `disconnect`), billing plans, the
+  OAuth end-user decisions (`deviceContext`, `deviceDecision`, `backchannelPending`,
+  `backchannelDecision`) and signing-key rotation, which the API no longer has.
+- `mfa` (use `users.resetMfa`), `AuthError`, `NetworkError`'s `status: 0`, `resolveEnvelope`,
+  `Envelope`, `discover(issuer, fetch)`'s old signature and `createFromDiscovery`.
 
 ### Fixed
 
-- **Users match the API** (QTID-530). `User` has `display_name` (not `name`), `status`
-  (`active` · `invited` · `suspended` · `deleted`), `avatar_url` and `metadata`, and no
-  `disabled_at`; list results add `roles`, `mfa_enabled`, `groups_count` and `last_seen_*`.
-  `CreateUserInput` takes `display_name` and `metadata`; `UpdateUserInput` takes `display_name`,
-  `avatar_url`, `phone`, `status` and `metadata` and no longer `email`, which the API refuses on
-  update. New `suspend(id)` and `reactivate(id)`. `list()`/`all()` take only `limit`/`cursor`, and
-  throw a `ValidationError` when given an organisation (the API lists the credential's own and
-  ignored it). Bulk results are `succeeded`/`failed` with each failed row's `line`. `listDeleted()`
-  returns the recycle-bin shape (`DeletedUser`). `verifyEmailStart(id)` has no address override,
-  which the server ignores by design.
-- **Application and agent calls match the API** (QTID-536). `oidc.create()` returns the server's
-  `{ client, client_secret?, warning? }` (it was read as the application, so every field was empty
-  and the one-time secret was lost). `OIDCClient` and its inputs use the API's `type` and
-  `post_logout_uris` plus `pkce_exempt_until` and the logout URIs; `token_endpoint_auth_method` is
-  gone (the API refuses it). `rotateSecret()` returns `{ client_secret, warning }`.
-  `ShadowAIClient` has `id`, `grant_types`, `live_grants` and `created_at`. `Agent` adds `status`
-  and `sponsor_user_id` and has no `tenant_id`; `agents.create()` requires `sponsor_user_id` (the
-  server refuses an agent without one); `agents.update()` resolves to nothing (204);
-  `agents.token(agentId, secret)` sends only those two (the server refused `tenant_id` and
-  `scope`).
-- **Introspection and revocation authenticate the client** (QTID-537). `introspect(token, client)`
-  and `revoke(token, client)` now take `{ clientId, clientSecret }` and send them over HTTP Basic.
-  The server authenticates the client first, so both calls were refused every time, and the token
-  guard refused every token. `IntrospectResult` adds `aud`, `client_id`, `iss`, `token_type`,
-  `resource`, `sid` and `act`.
+- Lists read the API's `items`; paged ones follow `next_cursor`.
+- `permissions.check` asks without `explain`; the result reads `allowed`.
+- Identifiers that are empty or `.`/`..` are refused instead of addressing another endpoint.
+- A cancelled call stops waiting between retries.
+
+### Security
+
+- The API key and client secrets are kept in private fields: they don't appear when a client is
+  printed or serialised, nor in errors or logs.
+- Webhook signatures are timestamped and checked for replay; token verification pins ES256 and
+  requires an issuer and an audience.
+- `tokenVault.getAccessToken()` stays deprecated and warns once per process: it hands out a raw
+  third-party token.
 
 ## [0.1.0] — 2026-07-10
 

@@ -72,6 +72,7 @@ jobs:
       - run: bun run check
       - run: bun run test
       - run: bun run build
+      - run: bun run check:package
 
       - name: Publish to npm
         run: npm publish --access public --provenance

@@ -1,110 +1,70 @@
 # Workflows — qeet-id-node
 
-**Level:** L2 · **Last verified:** 2026-08-28
+**Level:** L2 · **Last verified:** 2026-11-05
 **Verification scope:** every command checked against `package.json` and `.github/workflows/`.
 
 ## Set up
 
 ```bash
 bun install
-bun run verify   # typecheck + biome check + test + build
+bun run verify   # typecheck + Biome + tests + build + publint + attw
 ```
 
-No services required — tests stub `fetch`. There is no `.env`.
+No services required — tests stub `fetch`.
 
 ## Add a method to an existing resource
 
 ```text
-1  verify the endpoint      read the handler in qeet-id-server — NOT just the OpenAPI doc
-2  open src/<category>/<resource>.ts
-3  match the neighbour      same option shape, same error handling
-4  THROW on failure         never return a tuple (ADR-0003)
-5  wire fields snake_case   do NOT camelCase them (ADR-0004)
-6  test                     test/helpers/mock-transport.ts — recordingClient / scriptedClient
-7  README table row
+1  find the route        qeet-id-server api/openapi/<area>.yaml — and confirm an API key may call it:
+                         internal/bootstrap/permissions.go must not list it as user-only
+2  open src/resources/<area>/<resource>.ts
+3  match the neighbours  an async method; identifiers first, params, then options; path`…` for the path
+4  types                 <Resource><Action>Params for the body; response types from the schema, snake_case
+5  retries               a write is retried only if the API makes it idempotent (idempotent: true)
+                         or it changes nothing (retrySafe: true)
+6  test                  a row in test/resources/requests.test.ts; behaviour in test/resources/*.test.ts
+7  README and CHANGELOG
 8  bun run verify
 ```
 
 ## Add a whole resource
 
 ```text
-1  pick the category        identity | authentication | authorization | administration
-2  src/<category>/<resource>.ts  — export class XService
-3  re-export from src/<category>/index.ts
-4  add a FLAT field on QeetID in src/client/client.ts   (ADR-0002)
-5  confirm it is reachable from src/index.ts
-6  test/unit — a companion test is expected here (unlike the Go SDK, this repo honours that)
-7  README table row
-8  bun run verify
+1  src/resources/<area>/<resource>.ts — export class <Resource> extends ApiResource
+2  add a field on QeetID in src/client.ts, under its area
+3  export its types: `export type * from` in src/index.ts
+4  steps 6–8 above
 ```
 
-**Both index files matter.** A resource exported from its category barrel but unreachable from
-`src/index.ts` is invisible to consumers.
+## Paged lists
 
-## Add pagination to a list method
+A route answering `{items, next_cursor}` uses `this._page(() => path\`…\`, params, options)` and
+returns `PagePromise<T>`. A route answering `{items, truncated?}` uses `this._list(...)` and returns
+`ListResult<T>`.
 
-```text
-1  use paginate() from src/transport/pagination.ts
-2  signature order: fetchPage FIRST, startCursor second   (Go's is the other way round)
-3  throw on error — do not yield it
-4  test a single page and a multi-page walk
-```
+## Change transport, retries or errors
 
-## Change transport behaviour
-
-**Review required.**
-
-```text
-1  src/transport/{http,fetch,retry,errors}.ts
-2  RETRY IDEMPOTENCY IS A SAFETY RULE: 429 always; 5xx only for GET/DELETE
-3  a new default belongs beside the code that uses it (no constants module exists here)
-4  bun run verify
-```
-
-**Never make a non-idempotent method retryable.**
+**Review required.** `src/core/{http,retry,errors}.ts`. Keep ADR-0005: never make a write retryable
+without an idempotency key, never retry `auth.session_revoked`. Add a test in `test/core/`.
 
 ## Change cryptography
 
-**Security review required.**
-
-```text
-1  src/utils/jwt.ts (JWKS, ES256, clock skew) or src/utils/webhook.ts (HMAC)
-2  cite the RFC — do not improvise
-3  constant-time comparison for signatures
-4  NEGATIVE tests: bad signature, unknown kid, expired token, skew boundary
-5  bun run verify
-```
-
-Never weaken verification to make a test pass; never add a skip flag.
-
-## Change the error taxonomy
-
-**Coordination required — consumers `instanceof` these.**
-
-```text
-1  src/errors/*.ts
-2  keep the four classes distinct: ApiError | NetworkError | ValidationError | AuthError
-3  NetworkError MUST keep status 0 / code "network_error"
-4  update docs/design-decisions if the model itself changes
-5  bun run verify
-```
+**Security review required.** `src/webhooks/verify.ts` or `src/tokens/verifier.ts`. Cite the RFC or
+the server code; constant-time comparisons; negative tests (bad signature, wrong secret, stale
+timestamp, unknown kid, wrong issuer or audience). Webhook fixtures are regenerated from the server's
+own `deliver` and `sign` functions, never written by hand.
 
 ## Release
 
 ```text
-1  bump package.json version AND src/version.ts   (they are kept in sync BY HAND)
-2  CHANGELOG.md
-3  bun run verify
-4  tag vX.Y.Z and push the tag
+1  CHANGELOG.md: move [Unreleased] under the version being released
+2  bun run verify
+3  merge to main — release.yml takes the latest vX.Y.Z tag, bumps it (patch unless the manual run
+   asks for minor or major), writes it into package.json, runs the gate, publishes to npm with
+   provenance, then commits the bump and tags it
 ```
 
-`release.yml` then runs install/typecheck/check/test/build and `npm publish --access public --provenance`.
-
-> **The two version numbers are not linked.** Forgetting `src/version.ts` ships a package whose
-> `VERSION` export lies. There are no changesets in this repo.
-
-> `@qeet-id/node` is not on npm today. A first publish is a product decision — see
-> `qeet-id-context/DRIFT-REGISTER.md` QID-009.
+`VERSION` is written in from package.json at build time, so it always matches the published package.
 
 ## Finish any task
 
@@ -112,11 +72,3 @@ Never weaken verification to make a test pass; never add a skip flag.
 bun run verify
 git diff
 ```
-
-`bun run verify` is `typecheck && check && test && build` (`check` is Biome lint and formatting). Note CI's
-`ci.yml` does **not** run Biome — `lint.yml` does — so `bun run verify` locally is stricter than a single CI job.
-
-### Escalate rather than proceed
-
-A runtime dependency · a change to `src/index.ts` exports · the auth scheme · weakening verification ·
-making a non-idempotent method retryable · anything requiring another repository.
