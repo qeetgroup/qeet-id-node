@@ -1,24 +1,24 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "types": ["node"],
-    "declaration": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": false,
     "exactOptionalPropertyTypes": false,
-    "esModuleInterop": true,
+    "isolatedModules": true,
+    "isolatedDeclarations": true,
+    "verbatimModuleSyntax": true,
+    "declaration": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["dist", "node_modules", "examples"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "examples/**/*.ts"]
 }

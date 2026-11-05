@@ -5,69 +5,39 @@
 ```bash
 git clone https://github.com/qeetgroup/qeet-id-node
 cd qeet-id-node
-pnpm install
-pnpm check   # typecheck + lint + test
+bun install
+bun run verify   # typecheck + Biome + tests + build + publint + attw
 ```
 
-Requires Node.js 18.17+ (global `fetch`/`webcrypto`) — see `.nvmrc` for the
-version this repo is developed against.
+Requires Node.js 22.12 or later and bun (`packageManager` in `package.json`).
 
 ## Conventions
 
-- **One package, organized by category folder.** Every resource is a file
-  under `src/<category>/` (`src/identity/users.ts`, `src/authentication/oauth.ts`,
-  ...) — see [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
-  for why this beats one flat directory at this SDK's size. Every service is
-  still exposed as a flat, one-hop field on the client (`client.users`, not
-  `client.identity.users`) — the folders are a source-organization
-  convenience, not part of the public API shape.
-- **Zero third-party runtime dependencies.** Only the Node.js runtime
-  (`fetch`, `node:crypto`'s `webcrypto`, `node:crypto`'s `createHmac`/
-  `timingSafeEqual`) — this is a deliberate constraint, matching the Go
-  SDK's stdlib-only precedent. Don't add a JWT/HTTP/validation library
-  without raising it first.
-- **Every method returns a rejecting `Promise`, never a `(result, error)`
-  tuple.** Let `Transport` throw `ApiError`; don't catch-and-rewrap it in a
-  resource file unless you're adding real information.
-- **Wire-shape interface fields stay snake_case**, matching the JSON exactly
-  (`created_at`, not `createdAt`) — see
-  [docs/design-decisions/](docs/design-decisions/) before proposing a
-  camelCase mapping layer; it was deliberately rejected because it risks
-  corrupting dynamic/free-form map fields (`settings`, `context`, `raw`
-  claims) that aren't a fixed schema.
-- **Shared HTTP/crypto machinery lives in `src/transport/` and `src/utils/`**
-  — never duplicate retry/backoff, JSON envelope-unwrapping, or JWKS logic
-  in a resource file; add to those instead and import from there.
-- **Match the backend, not the OpenAPI spec's generic placeholders.** Some
-  backend routes have unenriched spec bodies (or the spec lags reality
-  entirely) — verify the real Go handler/domain struct in the `qeet-id`
-  backend repo before adding a typed response.
+- **The contract is the server's.** Every route comes from `qeet-id-server`'s OpenAPI documents, and
+  must be one an API key may call (check `internal/bootstrap/permissions.go`). Where a document is
+  ambiguous, the server's handler decides.
+- **One folder per API area** under `src/resources/` (ADR-0001); one class per namespace on `QeetID`
+  (ADR-0002).
+- **Names:** PascalCase types, camelCase methods, acronyms as words (`ApiKeys`, `SamlConnection`),
+  `<Resource><Action>Params` for inputs, no repeated nouns (`users.create`).
+- **Wire objects keep the wire's snake_case** (ADR-0004); SDK options are camelCase.
+- **Every method throws** (ADR-0003). Use the `path` tag for paths; let the core make errors.
+- **Retries:** mark a POST `retrySafe` only if repeating it changes nothing; mark `idempotent` only the
+  routes the server lists as idempotent (ADR-0005).
+- **Zero runtime dependencies.** Raise it before adding one.
+- **No credentials** in errors, logs, tests' output or examples.
 
 ## Tests
 
-Every resource file has a companion test under `test/unit/` asserting
-method/path/body shape against a mocked `fetch`, using the shared helper in
-`test/helpers/`. Run:
-
 ```bash
-pnpm test          # vitest run
-pnpm test:coverage
+bun run test           # vitest run
+bun run test:coverage
 ```
 
-## Adding a new resource
-
-1. Add the file under the right category folder, following an existing
-   resource (e.g. `src/identity/domains.ts`) as a template: an
-   `XService` class taking `Transport` in its constructor, methods on it,
-   request/response interfaces.
-2. Add the service instance to `QeetID` in `src/client/client.ts`, under the
-   right comment banner (Identity / Authentication / Authorization /
-   Administration), and re-export its types from the category's `index.ts`
-   and the root `src/index.ts`.
-3. Add a test with method/path/body-shape assertions.
-4. Update the resource table in `README.md`.
+Every method has a row in `test/resources/requests.test.ts` (method, path, body). Behaviour gets its
+own test. Use `test/helpers/mock-fetch.ts`. Webhook fixtures are captured from the server's own
+signing code; never edit them by hand.
 
 ## Reporting bugs
 
-Open an issue with the exact method call, expected vs. actual behavior, and
-(if applicable) the `requestId` from the thrown `ApiError`.
+Open an issue with the call, what you expected, what happened, and the `requestId` of the error.

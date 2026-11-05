@@ -15,9 +15,9 @@ We aim to acknowledge reports within 2 business days.
 
 ## Scope
 
-This policy covers the `qeet-id-node` SDK itself — the JWT/JWKS verification
-logic (`src/utils/jwt.ts`), webhook HMAC verification (`src/utils/webhook.ts`),
-and the HTTP transport (`src/transport/`) are the highest-sensitivity
+This policy covers the `qeet-id-node` SDK itself — access-token verification
+(`src/tokens/verifier.ts`), webhook verification (`src/webhooks/verify.ts`),
+and the HTTP client (`src/core/http.ts`) are the highest-sensitivity
 surfaces. Vulnerabilities in the Qeet ID platform/backend itself should be
 reported through Qeet ID's own security channel, not here.
 

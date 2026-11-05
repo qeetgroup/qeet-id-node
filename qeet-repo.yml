@@ -3,7 +3,7 @@
 
 schema_version: 1
 
-context: {type: repository, level: L2, canonical: true, last_verified: "2026-08-28"}
+context: {type: repository, level: L2, canonical: true, last_verified: "2026-11-05"}
 
 inheritance:
   organization: {repository: qeetgroup/qeet-context, level: L0}
@@ -14,58 +14,66 @@ repository:
   product: qeet-id
   type: sdk
   role: sdk
-  status: development        # v0.1.0 — NOT PUBLISHED: npm returns 404
+  status: development        # not yet published to npm
   visibility: public
   default_branch: main
 
 runtime:
   language: TypeScript
-  node: ">=18.17"            # .nvmrc pins 24
-  package_manager: pnpm@10.32.1
-  runtime_deps: none         # zero runtime dependencies; devDeps only
-  build: tsup                # dual ESM/CJS, dts, target node18
+  typescript: "7"
+  node: ">=22.12.0"          # tested on 22, 24 and 26; .nvmrc pins 24
+  package_manager: bun@1.4.3
+  lint_format: biome
+  runtime_deps: none         # fetch, Web Crypto and node:crypto only
+  build: tsdown              # ES module (.mjs/.d.mts) + CommonJS (.cjs/.d.cts), one file per module
 
 module: {name: "@qeet-id/node", version: "0.1.0"}
 
 architecture:
-  style: category-folders           # ADR-0001
-  client_shape: flat-fields         # ADR-0002 — client.users, client.apiKeys, ...
-  error_style: throw                # ADR-0003 — never a (result, error) tuple
-  wire_casing: snake_case-preserved # ADR-0004
-  categories: [identity, authentication, authorization, administration]
-  shared: [src/transport, src/utils, src/errors, src/types]
+  client: QeetID                     # one client, resources as namespaces (ADR-0002)
+  layout: api-area-folders           # src/resources/{identity,access,federation,developer,operations} (ADR-0001)
+  error_style: throw                 # ADR-0003 — QeetIDError hierarchy
+  wire_casing: snake_case-preserved  # ADR-0004 — options are camelCase
+  retries: retry-safe-only           # ADR-0005
+  packaging: dual-esm-cjs            # ADR-0006
+  shared: [src/core, src/webhooks, src/tokens]
 
 contracts:
-  consumes: {api: qeet-id-server, base_url: https://api.id.qeet.in}
-  auth_scheme: "authorization: ApiKey <qk_...>"   # lowercase header key
-  oauth_form_auth: "Basic <base64>"
+  consumes:
+    api: qeet-id-server
+    documents: [api/openapi/auth.yaml, api/openapi/management.yaml, api/openapi/federation.yaml, api/openapi/developer.yaml, api/openapi/operations.yaml]
+    tiebreaker: internal/ handlers and internal/bootstrap/permissions.go (route policy)
+    base_url: https://api.id.qeet.in
+  auth_scheme: "Authorization: ApiKey <qk_...>"
+  oauth_client_auth: client_secret_post
+  webhook_signature: "X-Qeet-Signature: sha256=HMAC(secret, X-Qeet-Timestamp + '.' + body); two values during a rotation"
 
 defaults:
-  timeout_ms: 10000
+  timeout_ms: 30000
   max_retries: 2
+  retry_backoff: 500ms doubling to 8s, equal jitter; Retry-After honoured up to 60s
+  webhook_tolerance_seconds: 300
   jwks_cache_ttl_ms: 300000
-  jwks_refresh_cooldown_ms: 60000
-  clock_skew_seconds: 30
-  retry_policy: 429 always; 5xx only when idempotent (GET/DELETE)
+  jwks_refresh_cooldown_ms: 30000
+  clock_tolerance_seconds: 30
 
 commands:
-  install: pnpm install
-  check:   pnpm check        # typecheck + lint + test — the gate
-  build:   pnpm build
-  test:    pnpm test
+  install: bun install
+  check:   bun run verify    # typecheck + biome + test + build + publint + attw — the gate
+  build:   bun run build
+  test:    bun run test
 
 ci:
   workflows: [ci.yml, codeql.yml, lint.yml, release.yml, security.yml]
-  matrix: ["18.17", "20", "22", "24"]
-  note: ci.yml does NOT run lint — lint lives only in lint.yml
-  release: tag v* -> pnpm publish --access public
+  matrix: ["22", "24", "26"]
+  release: push main -> bump package.json -> gate -> npm publish --access public --provenance -> tag vX.Y.Z
 
 security:
   sensitive_paths:
-    - src/utils/jwt.ts        # JWKS + ES256
-    - src/utils/webhook.ts    # HMAC verification
-    - src/transport/          # auth header injection
-  never: [add a runtime dependency, log an API key, weaken retry idempotency]
+    - src/core/http.ts          # API key handling, retries
+    - src/webhooks/verify.ts    # HMAC, timestamp, constant-time compare
+    - src/tokens/verifier.ts    # JWKS, ES256, issuer, audience
+  never: [add a runtime dependency, log a credential, retry a non-idempotent write, retry auth.session_revoked]
 
 llm_context:
   primary_instructions: AGENTS.md
@@ -73,4 +81,5 @@ llm_context:
   boundaries: docs/llm/boundaries.md
   workflows: docs/llm/workflows.md
   architecture_map: docs/llm/architecture-map.md
+  practices: docs/engineering-practices.md
   adapters: [CLAUDE.md, GEMINI.md, .github/copilot-instructions.md]

@@ -1,50 +1,35 @@
 # Future
 
-Capabilities common competitor CIAM SDKs (Auth0, Clerk, WorkOS) expose that
-`@qeet-id/node` doesn't, because the Qeet ID _backend_ doesn't have them
-yet. These aren't SDK gaps to fill with stub methods — a stub that compiles
-but throws at runtime is worse than not having the method at all. They're
-named here, each tied to a real tracked item, so this SDK adds real coverage
-the moment the backend ships them. (Same three items as the Go SDK's
-`docs/FUTURE.md` — this is the same backend.)
+What this SDK doesn't cover yet, and why.
 
-## Nested org hierarchy / tenancy primitives
+## API areas an API key may call but the SDK doesn't wrap yet
 
-Tracked: qeet-id ROADMAP.md item 3.5. Today every tenant is flat — no
-parent/child organization relationships. Once the backend introduces
-`platform/tenancy` and a `parent_id` on organizations, this SDK adds it to
-`OrganizationsService`.
+These exist in `qeet-id-server` and accept an API key. They were left for a later release to keep this
+one reviewable; each is additive.
 
-## SPIFFE / workload identity (JWT-SVID)
+- **Attribute-based access control** — `/v1/tenants/{tenantID}/abac/*` (policies, versions,
+  evaluate).
+- **Directory sync** — `/v1/tenants/{tenantID}/directory/*` (connection mappings, errors, activity,
+  alerts, profiles).
+- **OpenID Connect enterprise connections** — `/v1/tenants/{tenantID}/oidc-connections`.
+- **Compliance evidence** — `/v1/tenants/{tenantID}/compliance/*`.
+- **Activity feed and search** — `/v1/activity*`; `/v1/search` is user-only today.
+- **Group templates and import** — `/v1/groups/templates*`, `/v1/groups/import`.
+- **User administration extras** — suspended-user review (`/v1/users/suspended`,
+  `PUT /v1/users/{id}/suspension`), statistics and trends, trusted and push devices, passkeys,
+  sign-in history, break-glass members and login-domain checks.
+- **Email delivery** — messages and suppressions.
+- **Qeet AI tenant settings and usage**, **service health**, **billing trial**.
 
-Tracked: qeet-id ROADMAP.md item 3.6. CNCF-standard workload identity for
-service-to-service auth — genuinely industry-wide whitespace, not just a
-Qeet ID gap, but not yet built.
+## Not wrapped on purpose
 
-## Tenant-admin notification/broadcast management
+These need a person's own session rather than a server's API key, and the server refuses API keys on
+them: a person's sessions, second factors, passkeys, email change and account export; the end-user
+approval steps of the device and backchannel flows; the token vault's connect flow and a person's own
+connected accounts; notifications; Qeet AI conversations. The browser SDK and hosted pages cover them.
 
-Confirmed absent from the current API surface entirely: `GET /v1/notifications`
-and `POST /v1/notifications/mark-all-read` exist, but only for the
-_authenticated end-user's own inbox_ — there is no tenant-admin path for
-configuring or broadcasting notifications. If this becomes a requirement,
-it needs a backend API first; there's nothing here for an SDK to wrap yet.
+## Waiting on the API
 
-## Not gaps: deliberately out of scope
-
-Distinct from the above (missing because the backend doesn't have them),
-these exist in the backend but are intentionally not wrapped, because they
-require the _end user's own_ browser session/credentials rather than a
-server-side API key — the same reasoning that excludes login/signup/
-password-reset/OAuth-authorize flows throughout this SDK:
-
-- **Passkey enrollment/management** (`/passkeys`, `/passkeys/register/*`,
-  `/passkeys/login/*`) — every admin-facing passkey endpoint resolves the
-  user from the caller's own bearer session (`httpx.PrincipalFromCtx`), not
-  from a path parameter an API key could target on someone else's behalf.
-- **Password reset / magic link** (`/auth/forgot-password`,
-  `/auth/reset-password`, `/auth/magic-link/*`) — end-user browser
-  ceremonies.
-- **Token-vault browser OAuth dance** (`vault/tokens/{provider}/connect`,
-  `vault/tokens/callback`) — `tokenVault`'s provider-registration and
-  stored-grant lookup/retrieval methods are wrapped; the redirect ceremony
-  that puts a grant in the vault in the first place is not.
+- A brokered call for the token vault, so code never handles a raw third-party token
+  (`tokenVault.getAccessToken` is deprecated until then).
+- Nested organisations and workload identity (SPIFFE), once the server has them.

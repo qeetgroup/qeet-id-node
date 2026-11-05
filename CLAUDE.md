@@ -10,7 +10,7 @@ CLAUDE.md  →  AGENTS.md  →  docs/llm/*
 ## Canonical context
 
 | File | For |
-|---|---|
+| --- | --- |
 | [qeet-repo.yml](qeet-repo.yml) | Machine-readable repository identity |
 | [AGENTS.md](AGENTS.md) | **Rules, commands, what CI enforces** |
 | [docs/llm/context.md](docs/llm/context.md) | How this repository actually works |
@@ -19,31 +19,31 @@ CLAUDE.md  →  AGENTS.md  →  docs/llm/*
 | [docs/llm/architecture-map.md](docs/llm/architecture-map.md) | "Where is X?" — fastest path to a file |
 
 Parent context: **L0** `qeetgroup/qeet-context` · **L1** `qeetgroup/qeet-id-context`.
-Read them when a task needs organization or product understanding; this repository does not restate them.
 
 ## The things most likely to trip you up here
 
-1. **Zero runtime dependencies.** devDependencies are fine; a runtime dependency is a decision.
-2. **Every method throws** — never a `(result, error)` tuple (ADR-0003). Four classes: `ApiError`, `NetworkError`, `ValidationError`, `AuthError`.
-3. **Wire fields stay `snake_case`** (ADR-0004). Do not camelCase them — note the React SDK deliberately does the opposite.
-4. **Never invent an endpoint.** Verify against the real handler in `qeet-id-server`.
-5. **Retry idempotency is a safety rule:** 429 always; 5xx only on GET/DELETE. Never make POST/PATCH/PUT retryable.
-6. **Never weaken** `src/utils/jwt.ts` (JWKS/ES256) or `src/utils/webhook.ts` (HMAC).
+1. **Zero runtime dependencies.**
+2. **Every method throws** (ADR-0003); SDK errors extend `QeetIDError`.
+3. **Wire fields stay `snake_case`** (ADR-0004); options are camelCase.
+4. **Only routes an API key may call.** Check the OpenAPI document and the server's route policy.
+5. **Retries never repeat a write** (ADR-0005): GET, DELETE, `retrySafe` POSTs and idempotency-keyed
+   requests only; never `auth.session_revoked`.
+6. **Never weaken** `src/webhooks/verify.ts`, `src/tokens/verifier.ts` or `src/core/http.ts`.
 
 ## Working style
 
-- **Read before editing.** Match the neighbouring file's shape rather than introducing an abstraction.
+- **Read before editing.** Match the neighbouring resource file rather than introducing an abstraction.
 - Use the architecture map instead of guessing a path.
 - **Do not read `.env*` or secret files** into anything you write.
 
 ## Finishing a change
 
 ```bash
-pnpm check
+bun run verify
 git diff
 ```
 
 ## Escalate rather than proceed
 
 Stop and report if a task would weaken a security control, change a published contract, or require
-modifying another repository. Cross-repository impact: `qeet-id-context/CHANGE-MATRIX.md`.
+modifying another repository.
