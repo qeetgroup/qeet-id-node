@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.5/schema.json",
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -51,6 +51,6 @@
     }
   ],
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/coverage", "!bun.lock"]
+    "includes": ["**", "!**/node_modules", "!**/dist", "!**/coverage", "!bun.lock", "!**/*.md", "!**/*.yml", "!**/*.yaml"]
   }
 }
