@@ -27,7 +27,7 @@ export function normalizeBaseUrl(baseUrl: string): string {
     throw new TypeError("baseUrl must use https (plain http is allowed only for localhost).");
   }
   if (url.search !== "" || url.hash !== "") throw new TypeError("baseUrl must not have a query string or fragment.");
-  return url.toString().replace(/\/+$/, "");
+  return trimTrailingSlashes(url.toString());
 }
 
 /** The User-Agent: the SDK, its version and the runtime, after your application's `appInfo` when given. */
@@ -40,4 +40,15 @@ export function buildUserAgent(appInfo?: AppInfo): string {
   const version = appInfo.version ? `/${appInfo.version.replace(/\s+/g, "")}` : "";
   const url = appInfo.url ? ` (+${appInfo.url.replace(/[()\s]/g, "")})` : "";
   return `${appInfo.name}${version}${url} ${sdk}`;
+}
+
+/**
+ * Removes the trailing slashes from a URL or path, in linear time. It replaces
+ * `value.replace(/\/+$/, "")`, whose backtracking turns quadratic on a string
+ * of many slashes that don't end it (a slow-regex denial of service).
+ */
+export function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end--;
+  return end === value.length ? value : value.slice(0, end);
 }

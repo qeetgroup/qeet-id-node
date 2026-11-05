@@ -1,5 +1,5 @@
 import { TokenVerificationError } from "../core/errors.js";
-import { DEFAULT_BASE_URL } from "../core/config.js";
+import { DEFAULT_BASE_URL, trimTrailingSlashes } from "../core/config.js";
 
 /** The claims of a Qeet ID access token, as the token carries them. */
 export interface AccessTokenClaims {
@@ -97,7 +97,7 @@ export class TokenVerifier {
     if (!Number.isFinite(tolerance) || tolerance < 0) throw new RangeError("clockToleranceSeconds must be 0 or more.");
     this.issuer = options.issuer;
     this.audiences = Object.freeze(audiences);
-    this.jwksUrl = options.jwksUrl ?? `${(options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "")}/.well-known/jwks.json`;
+    this.jwksUrl = options.jwksUrl ?? `${trimTrailingSlashes(options.baseUrl ?? DEFAULT_BASE_URL)}/.well-known/jwks.json`;
     this.#clockToleranceMs = tolerance * 1000;
     this.#fetch = options.fetch ?? globalThis.fetch;
   }
