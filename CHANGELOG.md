@@ -6,8 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-A rework of the whole SDK against the API as it is today. The package has never been published, so
-these breaking changes ship without a major version.
+## [0.1.0] — 2026-11-05
+
+The first published version: a rework of the whole SDK against the API as it is today. The 0.1.0
+draft below was never published, so these breaking changes against it ship without a major version.
 
 ### Added
 
@@ -107,9 +109,9 @@ these breaking changes ship without a major version.
 - `tokenVault.getAccessToken()` stays deprecated and warns once per process: it hands out a raw
   third-party token.
 
-## [0.1.0] — 2026-07-10
+## 0.1.0 draft — 2026-07-10 (never published)
 
-Initial release.
+The first draft.
 
 ### Added
 
@@ -205,4 +207,5 @@ ahead of the sibling Go SDK, which does not yet have them. See
 the folder layout and [docs/design-decisions/](docs/design-decisions/) for
 every Node-specific API-shape trade-off.
 
+[Unreleased]: https://github.com/qeetgroup/qeet-id-node/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/qeetgroup/qeet-id-node/releases/tag/v0.1.0
