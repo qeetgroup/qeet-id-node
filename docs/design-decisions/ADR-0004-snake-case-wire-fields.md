@@ -25,7 +25,7 @@ export interface CreateUserInput {
   email?: string;
 }
 
-usersService.create({ tenant_id: id, email }); // createUser is camelCase; the input object's fields are not
+qeetId.users.create({ tenant_id: id, email }); // the method is camelCase; the input object's fields are not
 ```
 
 ## Why not a camelCase mapping layer
@@ -52,6 +52,14 @@ Stripe's official Node SDK makes the identical choice — request/response
 objects use the API's native snake_case field names directly
 (`stripe.customers.create({ payment_method: ... })`), while method names
 and their parameters are camelCase. This SDK follows the same pattern.
+
+## Scope
+
+The rule covers objects that map one to one onto the wire: request bodies, form fields (the OAuth
+grants take `client_id`, `refresh_token`, …) and responses. Options that are the SDK's own are
+camelCase: `timeoutMs`, `maxRetries`, `idempotencyKey`, `signal`, `toleranceSeconds`,
+`clockToleranceSeconds`. Lists the SDK builds itself are camelCase too (`ListResult.data`,
+`CursorPage.nextCursor`).
 
 ## Consequence
 
