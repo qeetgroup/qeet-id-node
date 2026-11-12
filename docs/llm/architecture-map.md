@@ -58,7 +58,7 @@ src/resources/operations/   operations.yaml   audit-logs · analytics · billing
 | **Mock fetch** | `test/helpers/mock-fetch.ts` |
 | Webhook fixtures (from the server's signing code) | `test/fixtures/webhook-deliveries.json` |
 | Examples | `examples/` (Node.js built-ins only, type-checked) |
-| CI | `.github/workflows/{ci,lint,security,codeql,release}.yml` |
+| CI (Verify) and release | `.github/workflows/{ci,release}.yml` |
 
 ## Decisions
 
