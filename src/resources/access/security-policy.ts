@@ -1,11 +1,13 @@
 import type { RequestOptions } from "../../core/options.js";
 import { ApiResource, path } from "../../core/resource.js";
 
-/** Session bounds, MFA enforcement and step-up rules for the organization. Durations are Go-style strings such as `"720h"`. */
+/**
+ * Session bounds, MFA enforcement and step-up rules for the organization.
+ * Durations are Go-style strings such as `"720h"`. Password rules are the
+ * auth policy's (`client.authPolicies`).
+ */
 export interface SecurityPolicy {
   organization_id?: string;
-  password_min_length?: number;
-  password_complexity?: string;
   session_max_age?: string;
   session_idle_timeout?: string;
   /** null: no limit. */
@@ -19,6 +21,9 @@ export interface SecurityPolicy {
   settings?: Record<string, unknown>;
 }
 
+/** The fields `update` and `replace` take. `mfa_enforced_since` is the server's to set. */
+export type SecurityPolicyUpdateParams = Omit<SecurityPolicy, "organization_id" | "mfa_enforced_since">;
+
 /** Manages the organization's security policy. Which addresses may sign in is `client.ipRules`. */
 export class SecurityPolicies extends ApiResource {
   /** The policy, or the platform defaults when none is saved. */
@@ -27,16 +32,12 @@ export class SecurityPolicies extends ApiResource {
   }
 
   /** Changes only the fields given. */
-  async update(organizationId: string, params: Omit<SecurityPolicy, "organization_id">, options?: RequestOptions): Promise<SecurityPolicy> {
+  async update(organizationId: string, params: SecurityPolicyUpdateParams, options?: RequestOptions): Promise<SecurityPolicy> {
     return this._send("PATCH", path`/v1/organizations/${organizationId}/policy`, params, options);
   }
 
   /** Replaces the whole policy. */
-  async replace(
-    organizationId: string,
-    policy: Omit<SecurityPolicy, "organization_id">,
-    options?: RequestOptions,
-  ): Promise<SecurityPolicy> {
+  async replace(organizationId: string, policy: SecurityPolicyUpdateParams, options?: RequestOptions): Promise<SecurityPolicy> {
     return this._send("PUT", path`/v1/organizations/${organizationId}/policy`, policy, options);
   }
 }

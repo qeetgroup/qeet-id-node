@@ -39,7 +39,12 @@ export interface AuditChainVerification {
   last_verified_id?: string;
   broken_at_id?: string;
   broken_reason?: string;
-  reason_code?: "audit.chain_prev_hash_mismatch" | "audit.chain_row_hash_mismatch";
+  reason_code?:
+    | "audit.chain_prev_hash_mismatch"
+    | "audit.chain_row_hash_mismatch"
+    | "audit.chain_checkpoint_gone"
+    | "audit.chain_checkpoint_unsigned"
+    | (string & {});
 }
 
 /** The latest scheduled verification of the chain. */
@@ -73,12 +78,16 @@ export interface AuditAnomaly {
 }
 
 export interface AuditAnomalySettings {
+  organization_id: string;
   enabled: boolean;
   /** Events scoring at least this are flagged. */
   score_threshold: number;
   /** Events an actor needs before their behaviour is judged. */
   min_baseline_events: number;
 }
+
+/** The settings `updateSettings` replaces: all three, as a setting left out would be stored as false or 0. */
+export type AuditAnomalySettingsUpdateParams = Omit<AuditAnomalySettings, "organization_id">;
 
 /** Behavioural anomalies found in the audit log. */
 export class AuditAnomalies extends ApiResource {
@@ -105,7 +114,11 @@ export class AuditAnomalies extends ApiResource {
     return this._get(path`/v1/organizations/${organizationId}/audit/anomaly-settings`, undefined, options);
   }
 
-  async updateSettings(organizationId: string, settings: AuditAnomalySettings, options?: RequestOptions): Promise<AuditAnomalySettings> {
+  async updateSettings(
+    organizationId: string,
+    settings: AuditAnomalySettingsUpdateParams,
+    options?: RequestOptions,
+  ): Promise<AuditAnomalySettings> {
     return this._send("PUT", path`/v1/organizations/${organizationId}/audit/anomaly-settings`, settings, options);
   }
 }

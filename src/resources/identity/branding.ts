@@ -9,8 +9,8 @@ export interface OrganizationBranding {
   primary_color: string | null;
   secondary_color: string | null;
   custom_domain: string | null;
+  /** The sender's display name. Email always comes from the platform's own address; replies go to `settings.email_reply_to`. */
   email_from_name: string | null;
-  email_from_address: string | null;
   /** `background_color` (six-digit hex) and `email_reply_to`; keep unknown keys when writing back. */
   settings: { background_color?: string; email_reply_to?: string; [key: string]: unknown };
 }

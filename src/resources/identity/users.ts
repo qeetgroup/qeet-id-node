@@ -2,8 +2,12 @@ import type { IdempotentRequestOptions, RequestOptions } from "../../core/option
 import type { CursorPageParams, ListResult, PagePromise } from "../../core/pagination.js";
 import { ApiResource, path } from "../../core/resource.js";
 
-/** A user's state. `invited` users haven't accepted their invitation yet. */
-export type UserStatus = "active" | "invited" | "suspended" | (string & {});
+/**
+ * A user's state. `invited` users haven't accepted their invitation yet;
+ * `deleted` is only on a list that asked for deleted members too
+ * (`include_deleted`).
+ */
+export type UserStatus = "active" | "invited" | "suspended" | "deleted" | (string & {});
 
 /** Why, by whom and when an organization's own user was suspended. */
 export interface UserSuspension {
@@ -41,6 +45,8 @@ export interface User {
   /** The name of the organization that manages the account. */
   home_organization_name?: string | null;
   suspension?: UserSuspension;
+  /** When the user was deleted: only on a list with `include_deleted`, for someone since deleted. */
+  deleted_at?: string;
 }
 
 export interface UserCreateParams {
@@ -73,11 +79,25 @@ export interface UserListParams extends CursorPageParams {
   role?: string;
   /** Matches `metadata.department`. */
   department?: string;
-  /** Whether the user has a confirmed second factor. */
+  /** Whether the user has a confirmed second factor. Sent as `mfa=on` or `mfa=off`. */
   mfa?: boolean;
   email_verified?: boolean;
   status?: "active" | "invited" | "suspended";
   last_seen?: "today" | "week" | "month" | "older" | "never";
+  /** `true`: only owners and admins with no confirmed second factor; `false`: everyone else. */
+  admins_without_mfa?: boolean;
+  /** `true`: only members of at least one group; `false`: only members of none. */
+  in_group?: boolean;
+  /** Only these users, by id (up to 200). */
+  id?: readonly string[];
+  /** Only these users, by email address in any case (up to 200). */
+  email?: readonly string[];
+  /** Adds the members since deleted, each with `deleted_at` and status `deleted`. */
+  include_deleted?: boolean;
+  /** `created` (the default, newest first), `name` (A first) or `last_seen` (most recent first). Every order pages by cursor. */
+  sort?: "created" | "name" | "last_seen";
+  /** Reverses or keeps the sort's own direction. A cursor works only with the sort and order of the page that gave it. */
+  order?: "asc" | "desc";
 }
 
 /** A soft-deleted user, as the recycle bin shows it. */
@@ -231,7 +251,8 @@ export class Users extends ApiResource {
    * ```
    */
   list(params: UserListParams = {}, options?: RequestOptions): PagePromise<User> {
-    return this._page<User>("/v1/users", { ...params }, options);
+    const { mfa, ...rest } = params;
+    return this._page<User>("/v1/users", { ...rest, mfa: mfa === undefined ? undefined : mfa ? "on" : "off" }, options);
   }
 
   /** Suspends the user: they can't sign in, and every session of theirs ends. */

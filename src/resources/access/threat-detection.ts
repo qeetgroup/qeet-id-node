@@ -17,7 +17,7 @@ export interface BotEvent {
 
 /** Recent bot-detection verdicts, a page at a time, with totals. */
 export interface BotActivity {
-  recent: BotEvent[];
+  items: BotEvent[];
   next_cursor?: string;
   total: number;
   stats: { blocked_24h: number; challenged_24h: number; threshold: number };

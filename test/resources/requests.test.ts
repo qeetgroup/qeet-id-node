@@ -78,10 +78,10 @@ const rows: [string, Call, string, string, unknown?][] = [
   ["users.listLinkedIdentities", (c) => c.users.listLinkedIdentities("u1"), "GET", "/v1/users/u1/social/identities"],
   [
     "groups.create",
-    (c) => c.groups.create({ organization_id: "t1", name: "Finance" }),
+    (c) => c.groups.create({ name: "Finance", parent_id: null }),
     "POST",
     "/v1/groups",
-    { organization_id: "t1", name: "Finance" },
+    { name: "Finance", parent_id: null },
   ],
   ["groups.update", (c) => c.groups.update("g1", { parent_id: null }), "PATCH", "/v1/groups/g1", { parent_id: null }],
   ["groups.delete", (c) => c.groups.delete("g1"), "DELETE", "/v1/groups/g1"],
@@ -870,7 +870,7 @@ describe("every method's request", () => {
 describe("Idempotency-Key on the creates the API makes idempotent", () => {
   const creates: [string, Call, string][] = [
     ["users.create", (c) => c.users.create({ organization_id: "t1", email: "a@b.in" }), "/v1/users"],
-    ["groups.create", (c) => c.groups.create({ organization_id: "t1", name: "Finance" }), "/v1/groups"],
+    ["groups.create", (c) => c.groups.create({ name: "Finance" }), "/v1/groups"],
     ["invitations.create", (c) => c.invitations.create({ organization_id: "t1", email: "a@b.in" }), "/v1/invites"],
     ["servicePrincipals.create", (c) => c.servicePrincipals.create({ organization_id: "t1", name: "etl" }), "/v1/service-principals"],
     ["apiKeys.create", (c) => c.apiKeys.create({ organization_id: "t1", name: "ci" }), "/v1/api-keys"],

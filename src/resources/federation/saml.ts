@@ -56,7 +56,19 @@ export interface SamlConnectionCreateParams {
   status?: "draft" | "active" | "disabled";
 }
 
-export type SamlConnectionUpdateParams = Partial<SamlConnectionCreateParams>;
+/** The fields an update may change; one left out keeps its value. */
+export interface SamlConnectionUpdateParams {
+  name?: string;
+  idp_entity_id?: string;
+  idp_sso_url?: string;
+  idp_certificate?: string;
+  email_attribute?: string;
+  name_attribute?: string;
+  groups_attribute?: string;
+  status?: "draft" | "active" | "disabled";
+  /** Accept sign-ins the identity provider starts, with no request from Qeet ID. */
+  allow_idp_initiated?: boolean;
+}
 
 /** Creates a connection from the identity provider's metadata (a URL or the XML). */
 export interface SamlConnectionImportParams {
@@ -191,7 +203,7 @@ export interface SamlServiceProvider {
   certificate?: string;
   require_signed_requests?: boolean;
   encrypt_assertions?: boolean;
-  certificate_details?: { subject: string; fingerprint_sha256: string; not_before: string; not_after: string };
+  certificate_details?: { subject: string; fingerprint_sha256: string; not_before: string; not_after: string } | null;
   status: ConnectionStatus;
   attributes?: SamlAttributeMapping[];
   /** Only assigned users and groups may sign in to it. */
@@ -211,6 +223,7 @@ export interface SamlServiceProviderCreateParams {
   require_signed_requests?: boolean;
   encrypt_assertions?: boolean;
   attributes?: SamlAttributeMapping[];
+  status?: "draft" | "active" | "disabled";
   assignment_required?: boolean;
 }
 

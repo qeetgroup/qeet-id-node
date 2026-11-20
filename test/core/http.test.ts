@@ -71,11 +71,11 @@ describe("requests", () => {
   it("encodes query parameters and leaves out undefined ones", async () => {
     const { client, requests } = mockClient([{ body: { items: [], next_cursor: "" } }]);
 
-    await client.users.list({ q: "ana & co", mfa: false, limit: 10 });
+    await client.users.list({ q: "ana & co", email_verified: false, limit: 10 });
 
     const query = requests[0]?.url.searchParams;
     expect(query?.get("q")).toBe("ana & co");
-    expect(query?.get("mfa")).toBe("false");
+    expect(query?.get("email_verified")).toBe("false");
     expect(query?.get("limit")).toBe("10");
     expect(query?.has("cursor")).toBe(false);
   });

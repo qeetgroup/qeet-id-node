@@ -39,6 +39,32 @@ calls below: upgrade, and rename as listed.
 - **`Organization` follows the API document:** it carries `logo_url`, its plan may be `starter`, its
   `metadata` may be null and `deletion_due_at` is always present (null when no deletion is scheduled).
   `OrganizationUpdateParams` takes `logo_url`, and no longer `plan`, which an update doesn't take.
+- **Request fields the API doesn't take are gone:** `GroupCreateParams.organization_id` (a group is
+  created in the API key's organization); the security policy's `password_min_length` and
+  `password_complexity` (ignored and never returned: password rules are `authPolicies`'), with
+  `update` and `replace` taking `SecurityPolicyUpdateParams`, without the read-only
+  `mfa_enforced_since`; and the branding's `email_from_address` (ignored and never returned).
+- **`auditLogs.anomalies.updateSettings`** takes `AuditAnomalySettingsUpdateParams`, all three
+  settings required as the API replaces them all; the answer, `AuditAnomalySettings`, carries
+  `organization_id`.
+- **`threatDetection.getBotActivity`** reads the page's detections from `items`
+  (`BotActivity.items`; the API sends no `recent`).
+- **`SamlConnectionUpdateParams`** is its own type, with `allow_idp_initiated`.
+
+### Added
+
+- **`users.list` filters:** `admins_without_mfa`, `in_group`, `id` and `email` (repeated, up to 200
+  each), `include_deleted`, and `sort` (`created`, `name`, `last_seen`) with `order`, paged by cursor in
+  every order. `User` carries `deleted_at`, and its status may be `deleted`, on a list that includes
+  deleted members.
+- `ipRules.list` reports `truncated`; `AuthHook.previous_secret_expires_at`; SAML service providers
+  take `status` on create and update, and their `certificate_details` may be null; the audit chain's
+  `reason_code` may be `audit.chain_checkpoint_gone` or `audit.chain_checkpoint_unsigned`.
+
+### Fixed
+
+- `users.list({ mfa })` sends `mfa=on` or `mfa=off`, as the API takes it; `true` and `false` were
+  refused with 400.
 
 ## [0.1.0] — 2026-11-05
 

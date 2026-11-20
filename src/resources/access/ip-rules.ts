@@ -22,6 +22,8 @@ export interface IpRuleCreateParams {
 export interface IpRuleList {
   enabled: boolean;
   data: IpRule[];
+  /** True when the API capped the list and more rules exist than `data` holds. */
+  truncated: boolean;
 }
 
 export type IpRuleReasonCode = "ip.allowed" | "ip.deny_rule" | "ip.not_in_allow_rules" | "ip.address_unknown" | "ip.enforcement_disabled";
@@ -34,18 +36,23 @@ export interface IpRuleCheck {
   reason_code: IpRuleReasonCode | (string & {});
   reason_params?: Record<string, unknown>;
   /** What the rules alone decide, whether or not they are enforced. */
-  rules?: { allowed: boolean; reason: string; reason_code: IpRuleReasonCode | (string & {}); reason_params?: Record<string, unknown> };
+  rules?: {
+    allowed: boolean;
+    reason: string;
+    reason_code: Exclude<IpRuleReasonCode, "ip.enforcement_disabled"> | (string & {});
+    reason_params?: Record<string, unknown>;
+  };
 }
 
 /** Manages the organization's address rules: which networks may sign in. */
 export class IpRules extends ApiResource {
   async list(organizationId: string, options?: RequestOptions): Promise<IpRuleList> {
-    const response = await this._get<{ enabled?: boolean; items?: IpRule[] }>(
+    const response = await this._get<{ enabled?: boolean; items?: IpRule[]; truncated?: boolean }>(
       path`/v1/organizations/${organizationId}/ip-rules`,
       undefined,
       options,
     );
-    return { enabled: response?.enabled === true, data: response?.items ?? [] };
+    return { enabled: response?.enabled === true, data: response?.items ?? [], truncated: response?.truncated === true };
   }
 
   async create(organizationId: string, params: IpRuleCreateParams, options?: RequestOptions): Promise<IpRule> {

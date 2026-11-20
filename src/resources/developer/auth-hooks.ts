@@ -17,6 +17,8 @@ export interface AuthHook {
   calls?: number;
   skips?: number;
   denies?: number;
+  /** While a replaced secret still signs calls alongside the new one; null when none overlaps. */
+  previous_secret_expires_at?: string | null;
 }
 
 export interface AuthHookCreateParams {

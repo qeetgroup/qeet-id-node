@@ -15,8 +15,8 @@ export interface Group {
   roles?: { role_id: string; name: string }[];
 }
 
+/** A new group, in the API key's organization. */
 export interface GroupCreateParams {
-  organization_id: string;
   name: string;
   description?: string;
   /** One of the organization's groups; omit or null for a top-level group. */
