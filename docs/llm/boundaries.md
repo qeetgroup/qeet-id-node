@@ -17,7 +17,7 @@ verification · access-token verification · the OAuth grants · the ES module a
 | A person's own account (sessions, factors, passkeys, email change) | the hosted pages and `qeet-id-react` |
 | The Go story | `qeet-id-go` |
 | Documentation site | `qeet-id-docs` |
-| Organization / product standards | `qeet-context` (L0) / `qeet-id-context` (L1) |
+| Organization / product standards | `qeet-context` (L0) / `qeet-id-files` (L1) |
 
 **The SDK never adds behaviour the API lacks.** A missing endpoint is server work.
 
