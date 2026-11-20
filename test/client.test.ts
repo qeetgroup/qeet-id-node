@@ -51,7 +51,7 @@ describe("the package", () => {
   it("puts every resource on the client", () => {
     const client = new sdk.QeetID();
     for (const name of [
-      "tenants",
+      "organizations",
       "domains",
       "users",
       "groups",

@@ -2,7 +2,7 @@ import type { IdempotentRequestOptions, RequestOptions } from "../../core/option
 import type { ListResult } from "../../core/pagination.js";
 import { ApiResource, path } from "../../core/resource.js";
 
-/** The organisation's Qeet ID subscription. Status `none` means it has none. */
+/** The organization's Qeet ID subscription. Status `none` means it has none. */
 export interface Subscription {
   status: "none" | "trialing" | "active" | "past_due" | "canceled";
   plan_code: string;
@@ -84,81 +84,84 @@ export interface CheckoutResult {
   provider?: string;
 }
 
-/** The organisation's plan: its features and limits. */
+/** The organization's plan: its features and limits. */
 export interface Entitlements {
   plan: "free" | "starter" | "pro" | "enterprise" | (string & {});
   features: Record<string, boolean>;
   limits: Record<string, number>;
 }
 
-/** The organisation's Qeet ID billing: subscription, invoices and plan. */
+/** The organization's Qeet ID billing: subscription, invoices and plan. */
 export class Billing extends ApiResource {
-  async getSubscription(tenantId: string, options?: RequestOptions): Promise<Subscription> {
-    return this._get(path`/v1/tenants/${tenantId}/billing/subscription`, undefined, options);
+  async getSubscription(organizationId: string, options?: RequestOptions): Promise<Subscription> {
+    return this._get(path`/v1/organizations/${organizationId}/billing/subscription`, undefined, options);
   }
 
   /** Changes the plan or currency. */
   async updateSubscription(
-    tenantId: string,
+    organizationId: string,
     params: { plan_code: string; currency: string },
     options?: RequestOptions,
   ): Promise<Subscription> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/billing/subscription`, params, options);
+    return this._send("PUT", path`/v1/organizations/${organizationId}/billing/subscription`, params, options);
   }
 
   /** Ends the subscription at the end of the current period. */
-  async cancelSubscription(tenantId: string, options?: RequestOptions): Promise<{ cancel_at_period_end: boolean }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/billing/subscription/cancel`, undefined, options);
+  async cancelSubscription(organizationId: string, options?: RequestOptions): Promise<{ cancel_at_period_end: boolean }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/billing/subscription/cancel`, undefined, options);
   }
 
   /** Starts a checkout for a plan. */
-  async checkout(tenantId: string, params: CheckoutParams, options?: IdempotentRequestOptions): Promise<CheckoutResult> {
-    return this._request({ method: "POST", path: path`/v1/tenants/${tenantId}/billing/checkout`, body: params, idempotent: true }, options);
+  async checkout(organizationId: string, params: CheckoutParams, options?: IdempotentRequestOptions): Promise<CheckoutResult> {
+    return this._request(
+      { method: "POST", path: path`/v1/organizations/${organizationId}/billing/checkout`, body: params, idempotent: true },
+      options,
+    );
   }
 
-  async listInvoices(tenantId: string, options?: RequestOptions): Promise<ListResult<Invoice>> {
-    return this._list(path`/v1/tenants/${tenantId}/billing/invoices`, undefined, options);
+  async listInvoices(organizationId: string, options?: RequestOptions): Promise<ListResult<Invoice>> {
+    return this._list(path`/v1/organizations/${organizationId}/billing/invoices`, undefined, options);
   }
 
   /** Starts paying an open invoice. */
   async payInvoice(
-    tenantId: string,
+    organizationId: string,
     invoiceId: string,
     params: { success_url: string; cancel_url: string },
     options?: IdempotentRequestOptions,
   ): Promise<CheckoutResult> {
     return this._request(
-      { method: "POST", path: path`/v1/tenants/${tenantId}/billing/invoices/${invoiceId}/pay`, body: params, idempotent: true },
+      { method: "POST", path: path`/v1/organizations/${organizationId}/billing/invoices/${invoiceId}/pay`, body: params, idempotent: true },
       options,
     );
   }
 
-  async getPaymentMethod(tenantId: string, options?: RequestOptions): Promise<PaymentMethod | null> {
+  async getPaymentMethod(organizationId: string, options?: RequestOptions): Promise<PaymentMethod | null> {
     const response = await this._get<{ payment_method?: PaymentMethod | null }>(
-      path`/v1/tenants/${tenantId}/billing/payment-method`,
+      path`/v1/organizations/${organizationId}/billing/payment-method`,
       undefined,
       options,
     );
     return response?.payment_method ?? null;
   }
 
-  async getProfile(tenantId: string, options?: RequestOptions): Promise<BillingProfile> {
-    return this._get(path`/v1/tenants/${tenantId}/billing/profile`, undefined, options);
+  async getProfile(organizationId: string, options?: RequestOptions): Promise<BillingProfile> {
+    return this._get(path`/v1/organizations/${organizationId}/billing/profile`, undefined, options);
   }
 
-  async updateProfile(tenantId: string, profile: Partial<BillingProfile>, options?: RequestOptions): Promise<BillingProfile> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/billing/profile`, profile, options);
+  async updateProfile(organizationId: string, profile: Partial<BillingProfile>, options?: RequestOptions): Promise<BillingProfile> {
+    return this._send("PUT", path`/v1/organizations/${organizationId}/billing/profile`, profile, options);
   }
 
   /** The plan's features and limits. */
-  async getEntitlements(tenantId: string, options?: RequestOptions): Promise<Entitlements> {
-    return this._get(path`/v1/tenants/${tenantId}/entitlements`, undefined, options);
+  async getEntitlements(organizationId: string, options?: RequestOptions): Promise<Entitlements> {
+    return this._get(path`/v1/organizations/${organizationId}/entitlements`, undefined, options);
   }
 
   /** How much of each limit is used. */
-  async getUsage(tenantId: string, options?: RequestOptions): Promise<Record<string, number>> {
+  async getUsage(organizationId: string, options?: RequestOptions): Promise<Record<string, number>> {
     const response = await this._get<{ usage?: Record<string, number> }>(
-      path`/v1/tenants/${tenantId}/entitlements/usage`,
+      path`/v1/organizations/${organizationId}/entitlements/usage`,
       undefined,
       options,
     );

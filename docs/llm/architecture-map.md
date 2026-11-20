@@ -31,13 +31,13 @@
 | **Webhook verification** | `src/webhooks/verify.ts` |
 | Webhook event catalogue and types | `src/webhooks/events.ts` |
 | **Access-token verification (JWKS, ES256)** | `src/tokens/verifier.ts` |
-| OAuth grants, introspection, `TokenGuard` | `src/resources/federation/oauth.ts` |
+| OAuth grants, introspection, `TokenGuard` | `src/resources/federation/oauth.ts`; the one token endpoint every grant (an agent's too) posts to: `src/resources/federation/token-endpoint.ts` |
 
 ## Resources — one folder per OpenAPI document
 
 ```text
-src/resources/identity/     management.yaml   tenants · domains · users · groups · invitations · branding
-src/resources/access/       auth.yaml         roles · permissions · relationships · decisions · auth-policy
+src/resources/identity/     identity.yaml     organizations · domains · users · groups · invitations · branding
+src/resources/access/       access.yaml       roles · permissions · relationships · decisions · auth-policy
                                               security-policy · ip-rules · threat-detection
 src/resources/federation/   federation.yaml   oauth · applications · service-principals · saml · ldap · scim
                                               social-providers · admin-portal-links

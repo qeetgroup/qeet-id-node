@@ -6,7 +6,7 @@ import type { ConnectionStatus, SsoGroupMapping, SsoGroupMappingCreateParams } f
 /** A directory (LDAP or Active Directory) connection. The bind password is never returned. */
 export interface LdapConnection {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   name: string;
   server_url: string;
   start_tls: boolean;
@@ -56,7 +56,7 @@ export interface TokenPair {
   idle_expires_at: string;
   session_id: string;
   user_id: string;
-  tenant_id?: string | null;
+  organization_id?: string | null;
 }
 
 /** A second factor the person may complete a challenge with. */
@@ -85,56 +85,59 @@ export type LdapAuthenticationResult = { type: "tokens"; tokens: TokenPair } | {
 
 /** Manages directory connections, and signs people in with their directory password. */
 export class LdapConnections extends ApiResource {
-  async create(tenantId: string, params: LdapConnectionCreateParams, options?: RequestOptions): Promise<LdapConnection> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/ldap`, params, options);
+  async create(organizationId: string, params: LdapConnectionCreateParams, options?: RequestOptions): Promise<LdapConnection> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/ldap`, params, options);
   }
 
-  async get(tenantId: string, connectionId: string, options?: RequestOptions): Promise<LdapConnection> {
-    return this._get(path`/v1/tenants/${tenantId}/ldap/${connectionId}`, undefined, options);
+  async get(organizationId: string, connectionId: string, options?: RequestOptions): Promise<LdapConnection> {
+    return this._get(path`/v1/organizations/${organizationId}/ldap/${connectionId}`, undefined, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<LdapConnection>> {
-    return this._list(path`/v1/tenants/${tenantId}/ldap`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<LdapConnection>> {
+    return this._list(path`/v1/organizations/${organizationId}/ldap`, undefined, options);
   }
 
   async update(
-    tenantId: string,
+    organizationId: string,
     connectionId: string,
     params: LdapConnectionUpdateParams,
     options?: RequestOptions,
   ): Promise<LdapConnection> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/ldap/${connectionId}`, params, options);
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/ldap/${connectionId}`, params, options);
   }
 
-  async delete(tenantId: string, connectionId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/ldap/${connectionId}`, options);
+  async delete(organizationId: string, connectionId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/ldap/${connectionId}`, options);
   }
 
   /** Binds to the directory with the stored credentials. A failure throws. */
-  async test(tenantId: string, connectionId: string, options?: RequestOptions): Promise<{ ok: boolean }> {
-    return this._request({ method: "POST", path: path`/v1/tenants/${tenantId}/ldap/${connectionId}/test`, retrySafe: true }, options);
+  async test(organizationId: string, connectionId: string, options?: RequestOptions): Promise<{ ok: boolean }> {
+    return this._request(
+      { method: "POST", path: path`/v1/organizations/${organizationId}/ldap/${connectionId}/test`, retrySafe: true },
+      options,
+    );
   }
 
-  async listGroupMappings(tenantId: string, connectionId: string, options?: RequestOptions): Promise<ListResult<SsoGroupMapping>> {
-    return this._list(path`/v1/tenants/${tenantId}/ldap/${connectionId}/group-mappings`, undefined, options);
+  async listGroupMappings(organizationId: string, connectionId: string, options?: RequestOptions): Promise<ListResult<SsoGroupMapping>> {
+    return this._list(path`/v1/organizations/${organizationId}/ldap/${connectionId}/group-mappings`, undefined, options);
   }
 
   async createGroupMapping(
-    tenantId: string,
+    organizationId: string,
     connectionId: string,
     params: SsoGroupMappingCreateParams,
     options?: RequestOptions,
   ): Promise<SsoGroupMapping> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/ldap/${connectionId}/group-mappings`, params, options);
+    return this._send("POST", path`/v1/organizations/${organizationId}/ldap/${connectionId}/group-mappings`, params, options);
   }
 
-  async deleteGroupMapping(tenantId: string, connectionId: string, mappingId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/ldap/${connectionId}/group-mappings/${mappingId}`, options);
+  async deleteGroupMapping(organizationId: string, connectionId: string, mappingId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/ldap/${connectionId}/group-mappings/${mappingId}`, options);
   }
 
   /**
    * Signs a person in with their directory username and password, under
-   * the organisation's lockout, network, risk and second-factor rules. The
+   * the organization's lockout, network, risk and second-factor rules. The
    * result is tokens, or a challenge to complete at `POST /v1/auth/mfa`:
    *
    * ```ts

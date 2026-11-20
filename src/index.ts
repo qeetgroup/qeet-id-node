@@ -61,7 +61,7 @@ export { TokenVerifier, type AccessTokenClaims, type TokenVerifierOptions } from
 export { createTokenVerifierFromDiscovery, discover, type DiscoverOptions, type DiscoveryDocument } from "./discovery.js";
 
 // Resource types. The resource classes are reached through a `QeetID` client.
-export type * from "./resources/identity/tenants.js";
+export type * from "./resources/identity/organizations.js";
 export type * from "./resources/identity/domains.js";
 export type * from "./resources/identity/users.js";
 export type * from "./resources/identity/groups.js";

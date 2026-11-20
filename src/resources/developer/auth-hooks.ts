@@ -46,30 +46,30 @@ export interface AuthHookTestResult {
 
 /** Manages authentication hooks. */
 export class AuthHooks extends ApiResource {
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<AuthHook>> {
-    return this._list(path`/v1/tenants/${tenantId}/auth-hooks`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<AuthHook>> {
+    return this._list(path`/v1/organizations/${organizationId}/auth-hooks`, undefined, options);
   }
 
-  async create(tenantId: string, params: AuthHookCreateParams, options?: RequestOptions): Promise<AuthHook> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/auth-hooks`, params, options);
+  async create(organizationId: string, params: AuthHookCreateParams, options?: RequestOptions): Promise<AuthHook> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/auth-hooks`, params, options);
   }
 
   /** Changes only the fields given. */
   async update(
-    tenantId: string,
+    organizationId: string,
     hookId: string,
     params: AuthHookUpdateParams,
     options?: RequestOptions,
   ): Promise<{ enabled: boolean; fail_open: boolean }> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/auth-hooks/${hookId}`, params, options);
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/auth-hooks/${hookId}`, params, options);
   }
 
-  async delete(tenantId: string, hookId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/auth-hooks/${hookId}`, options);
+  async delete(organizationId: string, hookId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/auth-hooks/${hookId}`, options);
   }
 
   /** Calls the hook with a sample payload and reports what it answered. */
-  async test(tenantId: string, hookId: string, options?: RequestOptions): Promise<AuthHookTestResult> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/auth-hooks/${hookId}/test`, undefined, options);
+  async test(organizationId: string, hookId: string, options?: RequestOptions): Promise<AuthHookTestResult> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/auth-hooks/${hookId}/test`, undefined, options);
   }
 }

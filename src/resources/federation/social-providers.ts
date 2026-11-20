@@ -5,7 +5,7 @@ import { ApiResource, path } from "../../core/resource.js";
 /** A social sign-in provider. Its client secret is never returned. */
 export interface SocialProvider {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   /** Its name: `github`, `facebook`, `x`, `discord`, `apple`, or any name for an OpenID Connect provider. */
   provider: string;
   /** How it signs people in: its own OAuth flow, or `oidc` by discovery. */
@@ -42,13 +42,13 @@ export interface SocialProviderUpdateParams {
   apple_key_id?: string;
 }
 
-/** Manages the API key's organisation's social sign-in providers, and linked social accounts. */
+/** Manages the API key's organization's social sign-in providers, and linked social accounts. */
 export class SocialProviders extends ApiResource {
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<SocialProvider>> {
-    return this._list(path`/v1/tenants/${tenantId}/social/providers`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<SocialProvider>> {
+    return this._list(path`/v1/organizations/${organizationId}/social/providers`, undefined, options);
   }
 
-  /** Adds a provider, or replaces the settings of one the organisation has. */
+  /** Adds a provider, or replaces the settings of one the organization has. */
   async upsert(params: SocialProviderUpsertParams, options?: RequestOptions): Promise<SocialProvider> {
     return this._send("POST", "/v1/social/providers", params, options);
   }

@@ -5,7 +5,7 @@ import { ApiResource, path } from "../../core/resource.js";
 /** An erasure request. It runs when its grace period ends, unless cancelled first. */
 export interface ErasureRequest {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   user_id: string;
   requested_by: string | null;
   reason: string | null;
@@ -23,7 +23,7 @@ export interface ErasureRequest {
 /** A data export. `payload` is filled in once `status` is `ready`. */
 export interface ExportRequest {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   user_id: string;
   requested_by: string | null;
   status: "pending" | "ready" | "failed" | (string & {});
@@ -36,12 +36,12 @@ export interface ExportRequest {
 /** Erasure requests (the right to be forgotten). */
 export class GdprErasures extends ApiResource {
   /** Requests a user's erasure, after a grace period. */
-  async create(params: { tenant_id: string; user_id: string; reason: string }, options?: RequestOptions): Promise<ErasureRequest> {
+  async create(params: { organization_id: string; user_id: string; reason: string }, options?: RequestOptions): Promise<ErasureRequest> {
     return this._send("POST", "/v1/gdpr/purge", params, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<ErasureRequest>> {
-    return this._list(path`/v1/tenants/${tenantId}/gdpr/purge`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<ErasureRequest>> {
+    return this._list(path`/v1/organizations/${organizationId}/gdpr/purge`, undefined, options);
   }
 
   /** Cancels a request still in its grace period. */
@@ -53,16 +53,16 @@ export class GdprErasures extends ApiResource {
 /** Data export requests (the right of access). */
 export class GdprExports extends ApiResource {
   /** Starts an export. It runs in the background: poll `get` until `status` is `ready` or `failed`. */
-  async create(params: { tenant_id: string; user_id: string }, options?: RequestOptions): Promise<ExportRequest> {
+  async create(params: { organization_id: string; user_id: string }, options?: RequestOptions): Promise<ExportRequest> {
     return this._send("POST", "/v1/gdpr/export", params, options);
   }
 
-  async get(tenantId: string, exportId: string, options?: RequestOptions): Promise<ExportRequest> {
-    return this._get(path`/v1/tenants/${tenantId}/gdpr/export/${exportId}`, undefined, options);
+  async get(organizationId: string, exportId: string, options?: RequestOptions): Promise<ExportRequest> {
+    return this._get(path`/v1/organizations/${organizationId}/gdpr/export/${exportId}`, undefined, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<ExportRequest>> {
-    return this._list(path`/v1/tenants/${tenantId}/gdpr/export`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<ExportRequest>> {
+    return this._list(path`/v1/organizations/${organizationId}/gdpr/export`, undefined, options);
   }
 }
 

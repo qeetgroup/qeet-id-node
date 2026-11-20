@@ -19,7 +19,7 @@ import {
 } from "../../src/index.js";
 import { envelope, mockClient, mockFetch } from "../helpers/mock-fetch.js";
 
-const user = { id: "u1", tenant_id: "t1", email: "ana@brightleaffoods.in", status: "active" };
+const user = { id: "u1", organization_id: "t1", email: "ana@brightleaffoods.in", status: "active" };
 const noWait = { "retry-after": "0" };
 
 describe("requests", () => {
@@ -137,7 +137,7 @@ describe("errors", () => {
     });
     const { client } = mockClient([{ status: 422, body, headers: { "x-request-id": "req_header" } }]);
 
-    const error = await client.users.create({ tenant_id: "t1", email: "nope" }).catch((e: unknown) => e);
+    const error = await client.users.create({ organization_id: "t1", email: "nope" }).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ValidationError);
     expect(error).toBeInstanceOf(ApiError);
@@ -238,7 +238,7 @@ describe("retries", () => {
       { status: 201, body: user },
     ]);
 
-    await client.users.create({ tenant_id: "t1", email: "ana@brightleaffoods.in" });
+    await client.users.create({ organization_id: "t1", email: "ana@brightleaffoods.in" });
 
     expect(requests).toHaveLength(2);
     const key = requests[0]?.headers.get("idempotency-key");
@@ -248,11 +248,15 @@ describe("retries", () => {
 
   it("uses the caller's idempotency key, and refuses a malformed one or one on a route that ignores it", async () => {
     const { client, requests } = mockClient([{ status: 201, body: user }]);
-    await client.users.create({ tenant_id: "t1", email: "ana@brightleaffoods.in" }, { idempotencyKey: "import-row-42" });
+    await client.users.create({ organization_id: "t1", email: "ana@brightleaffoods.in" }, { idempotencyKey: "import-row-42" });
     expect(requests[0]?.headers.get("idempotency-key")).toBe("import-row-42");
 
-    await expect(client.users.create({ tenant_id: "t1", email: "x@y.z" }, { idempotencyKey: "has space" })).rejects.toThrow(TypeError);
-    await expect(client.users.create({ tenant_id: "t1", email: "x@y.z" }, { idempotencyKey: "a".repeat(256) })).rejects.toThrow(TypeError);
+    await expect(client.users.create({ organization_id: "t1", email: "x@y.z" }, { idempotencyKey: "has space" })).rejects.toThrow(
+      TypeError,
+    );
+    await expect(client.users.create({ organization_id: "t1", email: "x@y.z" }, { idempotencyKey: "a".repeat(256) })).rejects.toThrow(
+      TypeError,
+    );
     // @ts-expect-error roles.create is not an idempotent route, so it takes no idempotencyKey
     await expect(client.roles.create("t1", { name: "R" }, { idempotencyKey: "k" })).rejects.toThrow(TypeError);
     expect(requests).toHaveLength(1);
@@ -263,13 +267,15 @@ describe("retries", () => {
       { status: 409, body: envelope("idempotency.in_progress"), headers: noWait },
       { status: 201, body: user },
     ]);
-    await client.users.create({ tenant_id: "t1", email: "ana@brightleaffoods.in" });
+    await client.users.create({ organization_id: "t1", email: "ana@brightleaffoods.in" });
     expect(requests).toHaveLength(2);
 
     const { client: second, requests: secondRequests } = mockClient([
       { status: 409, body: envelope("idempotency.outcome_unknown"), headers: noWait },
     ]);
-    await expect(second.users.create({ tenant_id: "t1", email: "a@b.c" })).rejects.toMatchObject({ code: "idempotency.outcome_unknown" });
+    await expect(second.users.create({ organization_id: "t1", email: "a@b.c" })).rejects.toMatchObject({
+      code: "idempotency.outcome_unknown",
+    });
     expect(secondRequests).toHaveLength(1);
   });
 

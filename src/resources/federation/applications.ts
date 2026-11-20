@@ -5,7 +5,7 @@ import { ApiResource, path } from "../../core/resource.js";
 /** An application: an OAuth 2.0 / OpenID Connect client that signs people in with Qeet ID. */
 export interface Application {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   /** The OAuth `client_id`. */
   client_id: string;
   /** `confidential` (has a secret) or `public` (a browser or mobile app). */
@@ -92,7 +92,7 @@ export interface ShadowAiApplication {
 /** An RFC 8707 resource: a downstream service applications may ask tokens for. A token issued for it names it alone as audience. */
 export interface OAuthResource {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   /** An absolute URI without a fragment, unique on the platform. */
   identifier: string;
   name?: string;
@@ -107,19 +107,19 @@ export interface OAuthResourceCreateParams {
   server_client_id?: string;
 }
 
-/** The organisation's registered RFC 8707 resources. */
+/** The organization's registered RFC 8707 resources. */
 export class OAuthResources extends ApiResource {
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<OAuthResource>> {
-    return this._list(path`/v1/tenants/${tenantId}/oidc/resources`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<OAuthResource>> {
+    return this._list(path`/v1/organizations/${organizationId}/oidc/resources`, undefined, options);
   }
 
-  async create(tenantId: string, params: OAuthResourceCreateParams, options?: RequestOptions): Promise<OAuthResource> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/oidc/resources`, params, options);
+  async create(organizationId: string, params: OAuthResourceCreateParams, options?: RequestOptions): Promise<OAuthResource> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/oidc/resources`, params, options);
   }
 
   /** No new token is issued for it; tokens already issued last out their short lifetime. */
-  async delete(tenantId: string, resourceId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/oidc/resources/${resourceId}`, options);
+  async delete(organizationId: string, resourceId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/oidc/resources/${resourceId}`, options);
   }
 }
 
@@ -129,45 +129,55 @@ export class Applications extends ApiResource {
   readonly resources: OAuthResources = new OAuthResources(this._http);
 
   /** Registers an application. A confidential one's secret is in the result, once. */
-  async create(tenantId: string, params: ApplicationCreateParams, options?: RequestOptions): Promise<ApplicationCreated> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/oidc/clients`, { ...params, tenant_id: tenantId }, options);
+  async create(organizationId: string, params: ApplicationCreateParams, options?: RequestOptions): Promise<ApplicationCreated> {
+    return this._send(
+      "POST",
+      path`/v1/organizations/${organizationId}/oidc/clients`,
+      { ...params, organization_id: organizationId },
+      options,
+    );
   }
 
-  async get(tenantId: string, applicationId: string, options?: RequestOptions): Promise<Application> {
-    return this._get(path`/v1/tenants/${tenantId}/oidc/clients/${applicationId}`, undefined, options);
+  async get(organizationId: string, applicationId: string, options?: RequestOptions): Promise<Application> {
+    return this._get(path`/v1/organizations/${organizationId}/oidc/clients/${applicationId}`, undefined, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<Application>> {
-    return this._list(path`/v1/tenants/${tenantId}/oidc/clients`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<Application>> {
+    return this._list(path`/v1/organizations/${organizationId}/oidc/clients`, undefined, options);
   }
 
   /** Changes only the fields given. */
-  async update(tenantId: string, applicationId: string, params: ApplicationUpdateParams, options?: RequestOptions): Promise<Application> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/oidc/clients/${applicationId}`, params, options);
+  async update(
+    organizationId: string,
+    applicationId: string,
+    params: ApplicationUpdateParams,
+    options?: RequestOptions,
+  ): Promise<Application> {
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/oidc/clients/${applicationId}`, params, options);
   }
 
   /** Deletes the application; its tokens and grants stop being honoured. */
-  async delete(tenantId: string, applicationId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/oidc/clients/${applicationId}`, options);
+  async delete(organizationId: string, applicationId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/oidc/clients/${applicationId}`, options);
   }
 
   /** Issues a new secret for a confidential application, shown once. The old one stops working at once. */
-  async rotateSecret(tenantId: string, applicationId: string, options?: RequestOptions): Promise<ApplicationSecret> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/oidc/clients/${applicationId}/rotate-secret`, undefined, options);
+  async rotateSecret(organizationId: string, applicationId: string, options?: RequestOptions): Promise<ApplicationSecret> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/oidc/clients/${applicationId}/rotate-secret`, undefined, options);
   }
 
   /** The application's wrong-secret lockout and its last 20 failed authentications. */
-  async getAuthFailures(tenantId: string, applicationId: string, options?: RequestOptions): Promise<ApplicationAuthFailures> {
-    return this._get(path`/v1/tenants/${tenantId}/oidc/clients/${applicationId}/auth-failures`, undefined, options);
+  async getAuthFailures(organizationId: string, applicationId: string, options?: RequestOptions): Promise<ApplicationAuthFailures> {
+    return this._get(path`/v1/organizations/${organizationId}/oidc/clients/${applicationId}/auth-failures`, undefined, options);
   }
 
   /** Applications holding a machine grant that nobody has reviewed. */
-  async listShadowAi(tenantId: string, options?: RequestOptions): Promise<ListResult<ShadowAiApplication>> {
-    return this._list(path`/v1/tenants/${tenantId}/oidc/clients/shadow-ai`, undefined, options);
+  async listShadowAi(organizationId: string, options?: RequestOptions): Promise<ListResult<ShadowAiApplication>> {
+    return this._list(path`/v1/organizations/${organizationId}/oidc/clients/shadow-ai`, undefined, options);
   }
 
   /** Marks the application reviewed: it leaves the shadow-AI list until its grant types change. */
-  async markReviewed(tenantId: string, applicationId: string, options?: RequestOptions): Promise<void> {
-    await this._send("POST", path`/v1/tenants/${tenantId}/oidc/clients/${applicationId}/review`, undefined, options);
+  async markReviewed(organizationId: string, applicationId: string, options?: RequestOptions): Promise<void> {
+    await this._send("POST", path`/v1/organizations/${organizationId}/oidc/clients/${applicationId}/review`, undefined, options);
   }
 }

@@ -8,7 +8,7 @@ export interface LockoutSettings {
   duration_minutes?: number;
 }
 
-/** How people may sign in to the organisation. */
+/** How people may sign in to the organization. */
 export interface AuthPolicy {
   password_enabled?: boolean;
   /** 8 to 128; clamped. */
@@ -42,19 +42,19 @@ export interface AuthPolicyUsage {
   magic_link_enabled: boolean;
 }
 
-/** Manages the organisation's sign-in policy: methods, password rules and lockout. */
+/** Manages the organization's sign-in policy: methods, password rules and lockout. */
 export class AuthPolicies extends ApiResource {
-  async get(tenantId: string, options?: RequestOptions): Promise<AuthPolicy> {
-    return this._get(path`/v1/tenants/${tenantId}/auth-policy`, undefined, options);
+  async get(organizationId: string, options?: RequestOptions): Promise<AuthPolicy> {
+    return this._get(path`/v1/organizations/${organizationId}/auth-policy`, undefined, options);
   }
 
   /** Replaces the policy. Read it first and send it back whole. */
-  async update(tenantId: string, policy: Omit<AuthPolicy, "lockout_limits">, options?: RequestOptions): Promise<AuthPolicy> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/auth-policy`, policy, options);
+  async update(organizationId: string, policy: Omit<AuthPolicy, "lockout_limits">, options?: RequestOptions): Promise<AuthPolicy> {
+    return this._send("PUT", path`/v1/organizations/${organizationId}/auth-policy`, policy, options);
   }
 
-  /** How the organisation's people sign in: who would be locked out by turning a method off. */
-  async getUsage(tenantId: string, options?: RequestOptions): Promise<AuthPolicyUsage> {
-    return this._get(path`/v1/tenants/${tenantId}/auth-policy/usage`, undefined, options);
+  /** How the organization's people sign in: who would be locked out by turning a method off. */
+  async getUsage(organizationId: string, options?: RequestOptions): Promise<AuthPolicyUsage> {
+    return this._get(path`/v1/organizations/${organizationId}/auth-policy/usage`, undefined, options);
   }
 }

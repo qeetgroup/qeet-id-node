@@ -2,7 +2,7 @@
 
 # 🔐 Qeet ID for Node.js
 
-**The server-side SDK for Qeet ID: manage an organisation's people and access, verify webhooks and access tokens, and run OAuth flows from Node.js.**
+**The server-side SDK for Qeet ID: manage an organization's people and access, verify webhooks and access tokens, and run OAuth flows from Node.js.**
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.12%2B-5FA04E?logo=nodedotjs&logoColor=white)](#-install)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](#-typescript-and-modules)
@@ -60,17 +60,17 @@ Create an API key in the Qeet ID console and keep it in a secret store.
 import { QeetID } from "@qeet-id/node";
 
 const qeetId = new QeetID({ apiKey: process.env.QEET_ID_API_KEY });
-const tenantId = process.env.QEET_ID_TENANT_ID!;
+const organizationId = process.env.QEET_ID_ORGANIZATION_ID!;
 
 const user = await qeetId.users.create({
-  tenant_id: tenantId,
+  organization_id: organizationId,
   email: "meera@brightleaffoods.in",
   display_name: "Meera Iyer",
 });
 
-await qeetId.roles.assign(tenantId, user.id, financeRoleId);
+await qeetId.roles.assign(organizationId, user.id, financeRoleId);
 
-const allowed = await qeetId.permissions.check({ user_id: user.id, tenant_id: tenantId, permission: "invoice.approve" });
+const allowed = await qeetId.permissions.check({ user_id: user.id, organization_id: organizationId, permission: "invoice.approve" });
 ```
 
 Create one client per process and share it: it is safe for concurrent use.
@@ -111,17 +111,17 @@ field names (`display_name`, `created_at`).
 
 | Area | Namespaces |
 |:--|:--|
-| 👥 **Identity** | `tenants` (the organisation) · `domains` · `users` · `groups` · `invitations` · `branding` |
+| 👥 **Identity** | `organizations` (the organization) · `domains` · `users` · `groups` · `invitations` · `branding` |
 | 🛡️ **Access** | `roles` · `permissions` · `relationships` (ReBAC tuples) · `decisions` (OpenID AuthZEN) · `authPolicies` · `securityPolicies` · `ipRules` · `threatDetection` (bots, risk, anomalies) |
 | 🌐 **Federation** | `oauth` · `applications` (OAuth/OpenID clients and RFC 8707 resources) · `servicePrincipals` · `samlConnections` · `samlServiceProviders` · `ldapConnections` · `scim` · `socialProviders` · `adminPortalLinks` |
 | 🛠️ **Developer** | `apiKeys` · `agents` · `verifiableCredentials` · `authHooks` · `webhooks` · `secrets` · `tokenVault` |
 | 📊 **Operations** | `auditLogs` · `analytics` · `billing` · `gdpr` · `emailTemplates` · `retention` · `logSinks` · `rateLimits` |
 
 ```ts
-const page = await qeetId.auditLogs.list(tenantId, { action: "user.deleted", from: "2026-11-01T00:00:00Z" });
-await qeetId.webhooks.update(tenantId, webhookId, { events: ["user.created", "user.deleted"] });
-const { secret } = await qeetId.webhooks.rotateSecret(tenantId, webhookId);
-const { data: secrets, truncated } = await qeetId.secrets.list(tenantId);
+const page = await qeetId.auditLogs.list(organizationId, { action: "user.deleted", from: "2026-11-01T00:00:00Z" });
+await qeetId.webhooks.update(organizationId, webhookId, { events: ["user.created", "user.deleted"] });
+const { secret } = await qeetId.webhooks.rotateSecret(organizationId, webhookId);
+const { data: secrets, truncated } = await qeetId.secrets.list(organizationId);
 ```
 
 The SDK covers the calls an API key may make. A person's own account (their sessions, factors, passkeys,
@@ -156,12 +156,12 @@ All of them extend `QeetIDError`; the API ones extend `ApiError`, which also has
 import { ConflictError, RateLimitError, ValidationError } from "@qeet-id/node";
 
 try {
-  await qeetId.users.create({ tenant_id: tenantId, email });
+  await qeetId.users.create({ organization_id: organizationId, email });
 } catch (error) {
   if (error instanceof ValidationError) {
     for (const field of error.fields) console.log(field.field, field.code, field.message);
   } else if (error instanceof ConflictError && error.code === "user.domain_managed_elsewhere") {
-    // another organisation manages that email domain
+    // another organization manages that email domain
   } else if (error instanceof RateLimitError) {
     console.log(`retry in ${error.retryAfterSeconds} s, request ${error.requestId}`);
   } else {
@@ -198,7 +198,7 @@ retries across calls, deployments or processes safe too:
 
 ```ts
 await qeetId.users.create(
-  { tenant_id: tenantId, email: "meera@brightleaffoods.in" },
+  { organization_id: organizationId, email: "meera@brightleaffoods.in" },
   { idempotencyKey: `onboarding-${employee.id}` }, // 1 to 255 printable ASCII characters
 );
 ```
@@ -230,7 +230,7 @@ Other lists come whole as `{ data, truncated }`; `truncated` is `true` when the 
 Each delivery is a signed POST whose body is an event:
 
 ```json
-{ "id": "…", "type": "user.created", "tenant_id": "…", "occurred_at": "2026-11-05T09:30:00Z", "data": { … } }
+{ "id": "…", "type": "user.created", "organization_id": "…", "occurred_at": "2026-11-05T09:30:00Z", "data": { … } }
 ```
 
 `constructWebhookEvent` checks `X-Qeet-Signature` (`sha256=` and the HMAC-SHA256 of `X-Qeet-Timestamp`, `.`
@@ -287,7 +287,7 @@ import { createTokenVerifierFromDiscovery, TokenVerificationError } from "@qeet-
 const verifier = await createTokenVerifierFromDiscovery({ audience: "https://api.brightleaffoods.in" });
 
 const claims = await verifier.verify(bearerToken); // throws TokenVerificationError
-claims.sub; claims.tenant_id; claims.scope;
+claims.sub; claims.organization_id; claims.scope;
 ```
 
 Or configure it directly with `new TokenVerifier({ issuer, audience, jwksUrl })`. Both `issuer` and `audience`
@@ -309,12 +309,15 @@ const claims = await guard.verify(bearerToken, ["files:read"]); // Authenticatio
 
 ## 🤝 OAuth
 
+Every grant goes to the one token endpoint, `POST /v1/oauth/token`, and `grant_type` picks the flow.
+
 ```ts
-// Machine-to-machine: a service principal's token (POST /v1/oauth/token).
+// Machine-to-machine: a service principal's or an AI agent's own token (client_credentials).
 const token = await qeetId.oauth.clientCredentialsGrant({ client_id, client_secret });
 token.access_token; token.expires_in; token.expires_at;
+await qeetId.agents.createToken(agentId, agentSecret); // the same grant, with the agent's id as client_id
 
-// The other grants (POST /v1/oauth/token-code).
+// The grants for applications.
 await qeetId.oauth.authorizationCodeGrant({ client_id, client_secret, code, redirect_uri, code_verifier });
 await qeetId.oauth.refreshTokenGrant({ client_id, client_secret, refresh_token });
 await qeetId.oauth.tokenExchangeGrant({ client_id, client_secret, subject_token, actor_token, scope });

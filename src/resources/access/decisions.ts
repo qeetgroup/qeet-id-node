@@ -76,24 +76,24 @@ export interface DecisionListParams extends CursorPageParams {
 /** OpenID AuthZEN evaluations over every authorization model, and the log of decisions made. */
 export class Decisions extends ApiResource {
   /** Evaluates one AuthZEN request. */
-  async evaluate(tenantId: string, params: EvaluationParams, options?: RequestOptions): Promise<Evaluation> {
+  async evaluate(organizationId: string, params: EvaluationParams, options?: RequestOptions): Promise<Evaluation> {
     return this._request(
-      { method: "POST", path: path`/v1/tenants/${tenantId}/access/v1/evaluation`, body: params, retrySafe: true },
+      { method: "POST", path: path`/v1/organizations/${organizationId}/access/v1/evaluation`, body: params, retrySafe: true },
       options,
     );
   }
 
   /** Evaluates several AuthZEN requests; decisions come back in request order. */
-  async evaluateMany(tenantId: string, params: EvaluationsParams, options?: RequestOptions): Promise<Evaluations> {
+  async evaluateMany(organizationId: string, params: EvaluationsParams, options?: RequestOptions): Promise<Evaluations> {
     const response = await this._request<Partial<Evaluations>>(
-      { method: "POST", path: path`/v1/tenants/${tenantId}/access/v1/evaluations`, body: params, retrySafe: true },
+      { method: "POST", path: path`/v1/organizations/${organizationId}/access/v1/evaluations`, body: params, retrySafe: true },
       options,
     );
     return { evaluations: response?.evaluations ?? [] };
   }
 
-  /** The access decisions the organisation asked for, newest first. */
-  list(tenantId: string, params: DecisionListParams = {}, options?: RequestOptions): PagePromise<DecisionLogEntry> {
-    return this._page(() => path`/v1/tenants/${tenantId}/authorization/decisions`, { ...params }, options);
+  /** The access decisions the organization asked for, newest first. */
+  list(organizationId: string, params: DecisionListParams = {}, options?: RequestOptions): PagePromise<DecisionLogEntry> {
+    return this._page(() => path`/v1/organizations/${organizationId}/authorization/decisions`, { ...params }, options);
   }
 }

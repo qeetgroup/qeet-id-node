@@ -22,7 +22,9 @@ createServer(async (req, res) => {
       res.writeHead(403, { "www-authenticate": 'Bearer error="insufficient_scope", scope="orders:read"' }).end();
       return;
     }
-    res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ user: claims.sub, tenant: claims.tenant_id }));
+    res
+      .writeHead(200, { "content-type": "application/json" })
+      .end(JSON.stringify({ user: claims.sub, organization: claims.organization_id }));
   } catch (error) {
     if (error instanceof TokenVerificationError) {
       res.writeHead(401, { "www-authenticate": 'Bearer error="invalid_token"' }).end();

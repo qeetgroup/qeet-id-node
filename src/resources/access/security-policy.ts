@@ -1,9 +1,9 @@
 import type { RequestOptions } from "../../core/options.js";
 import { ApiResource, path } from "../../core/resource.js";
 
-/** Session bounds, MFA enforcement and step-up rules for the organisation. Durations are Go-style strings such as `"720h"`. */
+/** Session bounds, MFA enforcement and step-up rules for the organization. Durations are Go-style strings such as `"720h"`. */
 export interface SecurityPolicy {
-  tenant_id?: string;
+  organization_id?: string;
   password_min_length?: number;
   password_complexity?: string;
   session_max_age?: string;
@@ -19,20 +19,24 @@ export interface SecurityPolicy {
   settings?: Record<string, unknown>;
 }
 
-/** Manages the organisation's security policy. Which addresses may sign in is `client.ipRules`. */
+/** Manages the organization's security policy. Which addresses may sign in is `client.ipRules`. */
 export class SecurityPolicies extends ApiResource {
   /** The policy, or the platform defaults when none is saved. */
-  async get(tenantId: string, options?: RequestOptions): Promise<SecurityPolicy> {
-    return this._get(path`/v1/tenants/${tenantId}/policy`, undefined, options);
+  async get(organizationId: string, options?: RequestOptions): Promise<SecurityPolicy> {
+    return this._get(path`/v1/organizations/${organizationId}/policy`, undefined, options);
   }
 
   /** Changes only the fields given. */
-  async update(tenantId: string, params: Omit<SecurityPolicy, "tenant_id">, options?: RequestOptions): Promise<SecurityPolicy> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/policy`, params, options);
+  async update(organizationId: string, params: Omit<SecurityPolicy, "organization_id">, options?: RequestOptions): Promise<SecurityPolicy> {
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/policy`, params, options);
   }
 
   /** Replaces the whole policy. */
-  async replace(tenantId: string, policy: Omit<SecurityPolicy, "tenant_id">, options?: RequestOptions): Promise<SecurityPolicy> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/policy`, policy, options);
+  async replace(
+    organizationId: string,
+    policy: Omit<SecurityPolicy, "organization_id">,
+    options?: RequestOptions,
+  ): Promise<SecurityPolicy> {
+    return this._send("PUT", path`/v1/organizations/${organizationId}/policy`, policy, options);
   }
 }

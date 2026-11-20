@@ -11,7 +11,7 @@ export interface Permission {
 
 /** Which model decided an authorization question, and by which rule. */
 export interface DecidedBy {
-  model: "tenant" | "abac" | "rbac" | "rebac" | "none" | (string & {});
+  model: "organization" | "abac" | "rbac" | "rebac" | "none" | (string & {});
   rule?: string;
   reason_code?: string;
   reason_params?: Record<string, unknown>;
@@ -31,10 +31,10 @@ export interface GrantStep {
   role_name?: string;
 }
 
-/** A permission check: may `user_id` use `permission` in `tenant_id`? */
+/** A permission check: may `user_id` use `permission` in `organization_id`? */
 export interface PermissionCheckParams {
   user_id: string;
-  tenant_id: string;
+  organization_id: string;
   /** A permission key, such as `invoice.write`. */
   permission: string;
 }
@@ -52,7 +52,7 @@ export interface PermissionDecision {
   trace?: string[];
 }
 
-/** Every permission a user holds in an organisation, and the grants behind them. */
+/** Every permission a user holds in an organization, and the grants behind them. */
 export interface EffectivePermissions {
   permissions: string[];
   grants: GrantStep[];
@@ -72,7 +72,7 @@ export class Permissions extends ApiResource {
   async check(params: PermissionCheckParams, options?: RequestOptions): Promise<boolean> {
     const decision = await this._get<PermissionDecision>(
       "/v1/check",
-      { user_id: params.user_id, tenant_id: params.tenant_id, permission: params.permission },
+      { user_id: params.user_id, organization_id: params.organization_id, permission: params.permission },
       options,
     );
     return decision?.allowed === true;
@@ -82,15 +82,15 @@ export class Permissions extends ApiResource {
   async explain(params: PermissionCheckParams, options?: RequestOptions): Promise<PermissionDecision> {
     return this._get(
       "/v1/check",
-      { user_id: params.user_id, tenant_id: params.tenant_id, permission: params.permission, explain: "true" },
+      { user_id: params.user_id, organization_id: params.organization_id, permission: params.permission, explain: "true" },
       options,
     );
   }
 
-  /** Every permission the user holds in the organisation, directly or through groups. */
-  async listEffective(tenantId: string, userId: string, options?: RequestOptions): Promise<EffectivePermissions> {
+  /** Every permission the user holds in the organization, directly or through groups. */
+  async listEffective(organizationId: string, userId: string, options?: RequestOptions): Promise<EffectivePermissions> {
     const response = await this._get<Partial<EffectivePermissions>>(
-      path`/v1/users/${userId}/tenants/${tenantId}/permissions`,
+      path`/v1/users/${userId}/organizations/${organizationId}/permissions`,
       undefined,
       options,
     );

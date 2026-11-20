@@ -11,10 +11,10 @@ export interface InvitationDelivery {
   message?: string;
 }
 
-/** An invitation to join the organisation. Its token is never returned: the link goes only to the invited address. */
+/** An invitation to join the organization. Its token is never returned: the link goes only to the invited address. */
 export interface Invitation {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   email: string;
   /** The role the invitee receives on accepting. */
   role_id: string | null;
@@ -27,7 +27,7 @@ export interface Invitation {
 }
 
 export interface InvitationCreateParams {
-  tenant_id: string;
+  organization_id: string;
   email: string;
   role_id?: string | null;
 }
@@ -44,8 +44,8 @@ export class Invitations extends ApiResource {
     return this._request({ method: "POST", path: "/v1/invites", body: params, idempotent: true }, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<Invitation>> {
-    return this._list(path`/v1/tenants/${tenantId}/invites`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<Invitation>> {
+    return this._list(path`/v1/organizations/${organizationId}/invites`, undefined, options);
   }
 
   /** Issues a new link, extends the expiry and emails the invitation again. */

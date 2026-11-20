@@ -13,7 +13,7 @@ export interface AccessTokenClaims {
   nbf?: number;
   jti?: string;
   user_id?: string;
-  tenant_id?: string;
+  organization_id?: string;
   /** The session the token belongs to. */
   sid?: string;
   /** Space-separated scopes. */

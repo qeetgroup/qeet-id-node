@@ -37,7 +37,8 @@ describe("client_credentials at /v1/oauth/token", () => {
     [400, "invalid_request", "grant_type is required."],
     [401, "invalid_client", "The client credentials are wrong."],
     [400, "unauthorized_client", "The service principal is disabled."],
-    [400, "unsupported_grant_type", "Only client_credentials is served here."],
+    [400, "unauthorized_client", "The agent is not active."],
+    [400, "unsupported_grant_type", "The grant type is not supported."],
   ];
 
   it.each(rfc6749)("maps %i %s to an OAuthError carrying the code, description and status", async (status, error, description) => {
@@ -67,7 +68,7 @@ describe("client_credentials at /v1/oauth/token", () => {
   });
 });
 
-describe("the grants at /v1/oauth/token-code", () => {
+describe("the other grants at the same token endpoint", () => {
   const tokens = { access_token: "at", token_type: "Bearer", expires_in: 600, refresh_token: "rt", id_token: "it", scope: "openid" };
 
   it.each([
@@ -104,11 +105,12 @@ describe("the grants at /v1/oauth/token-code", () => {
       (q: QeetID) => q.oauth.cibaGrant({ ...client, auth_req_id: "ar" }),
       { grant_type: "urn:openid:params:grant-type:ciba", auth_req_id: "ar" },
     ],
-  ])("%s posts its grant to the token-code endpoint", async (_name, call, expected) => {
+  ])("%s posts its grant to /v1/oauth/token", async (_name, call, expected) => {
     const { client: qeetId, requests } = mockClient([{ body: tokens }]);
     await expect(call(qeetId)).resolves.toEqual(tokens);
     const form = Object.fromEntries(requests[0]?.form ?? []);
-    expect(requests[0]?.path).toBe("/v1/oauth/token-code");
+    expect(requests[0]?.method).toBe("POST");
+    expect(requests[0]?.path).toBe("/v1/oauth/token");
     expect(form).toMatchObject(expected);
     expect(requests[0]?.headers.has("authorization")).toBe(false);
   });
@@ -229,5 +231,51 @@ describe("TokenGuard", () => {
     const qeetId = new QeetID();
     expect(() => qeetId.oauth.createTokenGuard({ ...options, audience: " " })).toThrow(TypeError);
     expect(() => qeetId.oauth.createTokenGuard({ ...options, client_secret: "" })).toThrow(TypeError);
+  });
+});
+
+describe("an agent's token: client_credentials at /v1/oauth/token", () => {
+  const answer = {
+    access_token: "eyJ.agent.token",
+    token_type: "Bearer",
+    expires_in: 300,
+    expires_at: "2026-11-05T09:35:00Z",
+    scope: "tickets:read",
+  };
+
+  it("agents.createToken sends the agent's id and secret as the client's credentials, without the API key", async () => {
+    const { client: qeetId, requests } = mockClient([{ body: answer }]);
+
+    await expect(qeetId.agents.createToken("ag1", "agent-secret")).resolves.toEqual(answer);
+
+    const [request] = requests;
+    expect(request?.method).toBe("POST");
+    expect(request?.path).toBe("/v1/oauth/token");
+    expect(request?.headers.get("content-type")).toBe("application/x-www-form-urlencoded");
+    expect(request?.headers.has("authorization")).toBe(false);
+    expect(Object.fromEntries(request?.form ?? [])).toEqual({
+      grant_type: "client_credentials",
+      client_id: "ag1",
+      client_secret: "agent-secret",
+    });
+  });
+
+  it("is the same request as oauth.clientCredentialsGrant with the agent's id", async () => {
+    const { client: qeetId, requests } = mockClient([{ body: answer }, { body: answer }]);
+    await qeetId.agents.createToken("ag1", "agent-secret");
+    await qeetId.oauth.clientCredentialsGrant({ client_id: "ag1", client_secret: "agent-secret" });
+    expect(requests[0]?.body).toBe(requests[1]?.body);
+  });
+
+  it.each<[OAuthErrorCode, number]>([
+    ["invalid_client", 401],
+    ["unauthorized_client", 400],
+  ])("throws OAuthError %s, once, without the secret in it", async (error, status) => {
+    const { client: qeetId, requests } = mockClient([{ status, body: { error, error_description: `${error} happened` } }]);
+    const thrown = (await qeetId.agents.createToken("ag1", "agent-secret").catch((e: unknown) => e)) as OAuthError;
+    expect(thrown).toBeInstanceOf(OAuthError);
+    expect(thrown).toMatchObject({ code: error, status });
+    expect(requests).toHaveLength(1);
+    expect(JSON.stringify({ ...thrown, message: thrown.message, stack: thrown.stack })).not.toContain("agent-secret");
   });
 });

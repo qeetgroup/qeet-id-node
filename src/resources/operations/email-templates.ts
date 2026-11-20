@@ -26,7 +26,7 @@ export interface EmailTemplateContent {
   options?: EmailTemplateOptions;
 }
 
-/** A template as it is used: the organisation's override (`custom`), or the platform's default. */
+/** A template as it is used: the organization's override (`custom`), or the platform's default. */
 export interface EmailTemplate extends EmailTemplateContent {
   key: string;
   name: string;
@@ -34,7 +34,7 @@ export interface EmailTemplate extends EmailTemplateContent {
   /** The placeholders it may use. */
   variables?: string[];
   custom: boolean;
-  delivery_scope?: "tenant" | "platform";
+  delivery_scope?: "organization" | "platform";
 }
 
 export interface EmailTemplatePreviewParams {
@@ -52,46 +52,46 @@ export interface EmailTemplatePreview {
   locale?: string;
 }
 
-/** Manages the organisation's email templates. The set of templates is fixed; each can be overridden and reset. */
+/** Manages the organization's email templates. The set of templates is fixed; each can be overridden and reset. */
 export class EmailTemplates extends ApiResource {
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<EmailTemplate>> {
-    return this._list(path`/v1/tenants/${tenantId}/email-templates`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<EmailTemplate>> {
+    return this._list(path`/v1/organizations/${organizationId}/email-templates`, undefined, options);
   }
 
-  async get(tenantId: string, key: string, options?: RequestOptions): Promise<EmailTemplate> {
-    return this._get(path`/v1/tenants/${tenantId}/email-templates/${key}`, undefined, options);
+  async get(organizationId: string, key: string, options?: RequestOptions): Promise<EmailTemplate> {
+    return this._get(path`/v1/organizations/${organizationId}/email-templates/${key}`, undefined, options);
   }
 
-  /** Saves the organisation's override of a template. */
-  async update(tenantId: string, key: string, content: EmailTemplateContent, options?: RequestOptions): Promise<EmailTemplate> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/email-templates/${key}`, content, options);
+  /** Saves the organization's override of a template. */
+  async update(organizationId: string, key: string, content: EmailTemplateContent, options?: RequestOptions): Promise<EmailTemplate> {
+    return this._send("PUT", path`/v1/organizations/${organizationId}/email-templates/${key}`, content, options);
   }
 
   /** Discards the override, going back to the platform's default. */
-  async reset(tenantId: string, key: string, options?: RequestOptions): Promise<EmailTemplate> {
-    return this._send("DELETE", path`/v1/tenants/${tenantId}/email-templates/${key}`, undefined, options);
+  async reset(organizationId: string, key: string, options?: RequestOptions): Promise<EmailTemplate> {
+    return this._send("DELETE", path`/v1/organizations/${organizationId}/email-templates/${key}`, undefined, options);
   }
 
   /** Renders a template with `vars`. Sends nothing. */
   async preview(
-    tenantId: string,
+    organizationId: string,
     key: string,
     params: EmailTemplatePreviewParams = {},
     options?: RequestOptions,
   ): Promise<EmailTemplatePreview> {
     return this._request(
-      { method: "POST", path: path`/v1/tenants/${tenantId}/email-templates/${key}/preview`, body: params, retrySafe: true },
+      { method: "POST", path: path`/v1/organizations/${organizationId}/email-templates/${key}/preview`, body: params, retrySafe: true },
       options,
     );
   }
 
   /** Sends a draft to the caller's own address. */
   async sendTest(
-    tenantId: string,
+    organizationId: string,
     key: string,
     params: { draft: EmailTemplateContent; locale?: string },
     options?: RequestOptions,
   ): Promise<void> {
-    await this._send("POST", path`/v1/tenants/${tenantId}/email-templates/${key}/test`, params, options);
+    await this._send("POST", path`/v1/organizations/${organizationId}/email-templates/${key}/test`, params, options);
   }
 }

@@ -6,7 +6,7 @@ administration)
 ## Context
 
 The SDK wraps about 250 API calls. The server publishes its contract as five OpenAPI documents, one per
-bounded context: `management.yaml` (identity), `auth.yaml` (access), `federation.yaml`,
+bounded context: `identity.yaml`, `access.yaml`, `federation.yaml`,
 `developer.yaml` and `operations.yaml`. The SDK's earlier folders used four categories of their own,
 which didn't match the documents, so finding the contract for a file meant searching all five.
 

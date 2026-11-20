@@ -5,7 +5,7 @@ import { ApiResource, path } from "../../core/resource.js";
 /** One entry of the hash-chained audit log. */
 export interface AuditLogEntry {
   id: string;
-  tenant_id: string | null;
+  organization_id: string | null;
   action: string;
   actor_type: string;
   actor_user_id: string | null;
@@ -56,7 +56,7 @@ export interface AuditVerificationStatus {
 /** An audit event that departs from the actor's usual behaviour. */
 export interface AuditAnomaly {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   event_id: string;
   actor_user_id: string | null;
   actor_email?: string | null;
@@ -83,27 +83,30 @@ export interface AuditAnomalySettings {
 /** Behavioural anomalies found in the audit log. */
 export class AuditAnomalies extends ApiResource {
   async list(
-    tenantId: string,
+    organizationId: string,
     params: { status?: "open" | "resolved"; limit?: number } = {},
     options?: RequestOptions,
   ): Promise<ListResult<AuditAnomaly>> {
-    return this._list(path`/v1/tenants/${tenantId}/audit/anomalies`, { ...params }, options);
+    return this._list(path`/v1/organizations/${organizationId}/audit/anomalies`, { ...params }, options);
   }
 
-  async getSummary(tenantId: string, options?: RequestOptions): Promise<{ open: number; high_score_open: number; resolved_7d: number }> {
-    return this._get(path`/v1/tenants/${tenantId}/audit/anomalies/summary`, undefined, options);
+  async getSummary(
+    organizationId: string,
+    options?: RequestOptions,
+  ): Promise<{ open: number; high_score_open: number; resolved_7d: number }> {
+    return this._get(path`/v1/organizations/${organizationId}/audit/anomalies/summary`, undefined, options);
   }
 
-  async resolve(tenantId: string, anomalyId: string, options?: RequestOptions): Promise<void> {
-    await this._send("POST", path`/v1/tenants/${tenantId}/audit/anomalies/${anomalyId}/resolve`, undefined, options);
+  async resolve(organizationId: string, anomalyId: string, options?: RequestOptions): Promise<void> {
+    await this._send("POST", path`/v1/organizations/${organizationId}/audit/anomalies/${anomalyId}/resolve`, undefined, options);
   }
 
-  async getSettings(tenantId: string, options?: RequestOptions): Promise<AuditAnomalySettings> {
-    return this._get(path`/v1/tenants/${tenantId}/audit/anomaly-settings`, undefined, options);
+  async getSettings(organizationId: string, options?: RequestOptions): Promise<AuditAnomalySettings> {
+    return this._get(path`/v1/organizations/${organizationId}/audit/anomaly-settings`, undefined, options);
   }
 
-  async updateSettings(tenantId: string, settings: AuditAnomalySettings, options?: RequestOptions): Promise<AuditAnomalySettings> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/audit/anomaly-settings`, settings, options);
+  async updateSettings(organizationId: string, settings: AuditAnomalySettings, options?: RequestOptions): Promise<AuditAnomalySettings> {
+    return this._send("PUT", path`/v1/organizations/${organizationId}/audit/anomaly-settings`, settings, options);
   }
 }
 
@@ -113,17 +116,17 @@ export class AuditLogs extends ApiResource {
   readonly anomalies: AuditAnomalies = new AuditAnomalies(this._http);
 
   /** Lists entries, newest first. */
-  list(tenantId: string, params: AuditLogListParams = {}, options?: RequestOptions): PagePromise<AuditLogEntry> {
-    return this._page(() => path`/v1/tenants/${tenantId}/audit`, { ...params }, options);
+  list(organizationId: string, params: AuditLogListParams = {}, options?: RequestOptions): PagePromise<AuditLogEntry> {
+    return this._page(() => path`/v1/organizations/${organizationId}/audit`, { ...params }, options);
   }
 
   /** Walks the whole chain now and recomputes every row's hash. Changes nothing. */
-  async verify(tenantId: string, options?: RequestOptions): Promise<AuditChainVerification> {
-    return this._get(path`/v1/tenants/${tenantId}/audit/verify`, undefined, options);
+  async verify(organizationId: string, options?: RequestOptions): Promise<AuditChainVerification> {
+    return this._get(path`/v1/organizations/${organizationId}/audit/verify`, undefined, options);
   }
 
   /** The latest scheduled verification's outcome. */
-  async getVerificationStatus(tenantId: string, options?: RequestOptions): Promise<AuditVerificationStatus> {
-    return this._get(path`/v1/tenants/${tenantId}/audit/verification`, undefined, options);
+  async getVerificationStatus(organizationId: string, options?: RequestOptions): Promise<AuditVerificationStatus> {
+    return this._get(path`/v1/organizations/${organizationId}/audit/verification`, undefined, options);
   }
 }
