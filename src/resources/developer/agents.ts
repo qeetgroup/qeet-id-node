@@ -1,6 +1,8 @@
 import type { IdempotentRequestOptions, RequestOptions } from "../../core/options.js";
 import type { ListResult } from "../../core/pagination.js";
 import { ApiResource, path } from "../../core/resource.js";
+import type { ClientCredentialsToken } from "../federation/oauth.js";
+import { requestToken } from "../federation/token-endpoint.js";
 
 /** An AI agent's lifecycle state. `decommissioned` is final. */
 export type AgentLifecycle = "active" | "suspended" | "decommissioned";
@@ -33,13 +35,8 @@ export interface AgentCreateParams {
   token_ttl_seconds?: number;
 }
 
-/** A token for an agent, from its id and secret. */
-export interface AgentToken {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  scope?: string;
-}
+/** A token for an agent, from its id and secret: the `client_credentials` grant's answer. */
+export type AgentToken = ClientCredentialsToken;
 
 /** A new agent secret, shown once, and when the old one stops working. */
 export interface AgentSecret {
@@ -50,77 +47,90 @@ export interface AgentSecret {
 
 /** Manages AI agent identities: their tokens, secrets and lifecycle. */
 export class Agents extends ApiResource {
-  async create(tenantId: string, params: AgentCreateParams, options?: IdempotentRequestOptions): Promise<Agent> {
-    return this._request({ method: "POST", path: path`/v1/tenants/${tenantId}/agents`, body: params, idempotent: true }, options);
+  async create(organizationId: string, params: AgentCreateParams, options?: IdempotentRequestOptions): Promise<Agent> {
+    return this._request(
+      { method: "POST", path: path`/v1/organizations/${organizationId}/agents`, body: params, idempotent: true },
+      options,
+    );
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<Agent>> {
-    return this._list(path`/v1/tenants/${tenantId}/agents`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<Agent>> {
+    return this._list(path`/v1/organizations/${organizationId}/agents`, undefined, options);
   }
 
-  async delete(tenantId: string, agentId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/agents/${agentId}`, options);
+  async delete(organizationId: string, agentId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/agents/${agentId}`, options);
   }
 
   /** Suspends (`true`) or resumes (`false`) the agent. Prefer `suspend` and `resume`. */
-  async setDisabled(tenantId: string, agentId: string, disabled: boolean, options?: RequestOptions): Promise<void> {
-    await this._send("PATCH", path`/v1/tenants/${tenantId}/agents/${agentId}`, { disabled }, options);
+  async setDisabled(organizationId: string, agentId: string, disabled: boolean, options?: RequestOptions): Promise<void> {
+    await this._send("PATCH", path`/v1/organizations/${organizationId}/agents/${agentId}`, { disabled }, options);
   }
 
   /** Suspends the agent: its tokens stop working at once. Reversible with `resume`. */
-  async suspend(tenantId: string, agentId: string, options?: RequestOptions): Promise<{ status: AgentLifecycle }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/agents/${agentId}/suspend`, undefined, options);
+  async suspend(organizationId: string, agentId: string, options?: RequestOptions): Promise<{ status: AgentLifecycle }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/agents/${agentId}/suspend`, undefined, options);
   }
 
-  async resume(tenantId: string, agentId: string, options?: RequestOptions): Promise<{ status: AgentLifecycle }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/agents/${agentId}/resume`, undefined, options);
+  async resume(organizationId: string, agentId: string, options?: RequestOptions): Promise<{ status: AgentLifecycle }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/agents/${agentId}/resume`, undefined, options);
   }
 
   /** Retires the agent for good. */
-  async decommission(tenantId: string, agentId: string, options?: RequestOptions): Promise<{ status: AgentLifecycle }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/agents/${agentId}/decommission`, undefined, options);
+  async decommission(organizationId: string, agentId: string, options?: RequestOptions): Promise<{ status: AgentLifecycle }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/agents/${agentId}/decommission`, undefined, options);
   }
 
-  /** Incident response: suspends every active agent of the organisation at once. */
-  async suspendAll(tenantId: string, options?: RequestOptions): Promise<{ suspended: number }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/agents/kill-all`, undefined, options);
+  /** Incident response: suspends every active agent of the organization at once. */
+  async suspendAll(organizationId: string, options?: RequestOptions): Promise<{ suspended: number }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/agents/kill-all`, undefined, options);
   }
 
-  /** Resumes every suspended agent of the organisation at once. */
-  async resumeAll(tenantId: string, options?: RequestOptions): Promise<{ resumed: number }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/agents/resume-all`, undefined, options);
+  /** Resumes every suspended agent of the organization at once. */
+  async resumeAll(organizationId: string, options?: RequestOptions): Promise<{ resumed: number }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/agents/resume-all`, undefined, options);
   }
 
   /** Issues a new secret, shown once; the old one keeps working for `overlap_hours`. */
   async rotateSecret(
-    tenantId: string,
+    organizationId: string,
     agentId: string,
     params: { overlap_hours?: number } = {},
     options?: RequestOptions,
   ): Promise<AgentSecret> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/agents/${agentId}/rotate-secret`, params, options);
+    return this._send("POST", path`/v1/organizations/${organizationId}/agents/${agentId}/rotate-secret`, params, options);
   }
 
   /** Lists the agents a person sponsors. */
-  async listSponsoredBy(tenantId: string, userId: string, options?: RequestOptions): Promise<ListResult<Agent>> {
-    return this._list(path`/v1/tenants/${tenantId}/agents/sponsored-by/${userId}`, undefined, options);
+  async listSponsoredBy(organizationId: string, userId: string, options?: RequestOptions): Promise<ListResult<Agent>> {
+    return this._list(path`/v1/organizations/${organizationId}/agents/sponsored-by/${userId}`, undefined, options);
   }
 
   /** Gives every agent a person sponsors to another sponsor, as when the person leaves. */
   async transferSponsorship(
-    tenantId: string,
+    organizationId: string,
     fromUserId: string,
     toUserId: string,
     options?: RequestOptions,
   ): Promise<{ transferred: number }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/agents/sponsored-by/${fromUserId}/transfer`, { to_user_id: toUserId }, options);
+    return this._send(
+      "POST",
+      path`/v1/organizations/${organizationId}/agents/sponsored-by/${fromUserId}/transfer`,
+      { to_user_id: toUserId },
+      options,
+    );
   }
 
   /**
-   * Gets a short-lived access token for an agent from its id and secret. The
-   * token carries the agent's scopes. Sends no API key.
+   * Gets a short-lived access token for an agent from its id and secret: the
+   * `client_credentials` grant at the token endpoint, as
+   * `oauth.clientCredentialsGrant` with the agent's id as `client_id`. The
+   * token carries the agent's scopes and lasts its `token_ttl_seconds`. Sends
+   * no API key, and is never retried. A refusal throws an `OAuthError`:
+   * `invalid_client` for a wrong id or secret, `unauthorized_client` for an
+   * agent that isn't active.
    */
   async createToken(agentId: string, secret: string, options?: RequestOptions): Promise<AgentToken> {
-    return this._request({ method: "POST", path: "/v1/agents/token", body: { agent_id: agentId, secret }, authenticate: false }, options);
+    return requestToken(this._http, { grant_type: "client_credentials", client_id: agentId, client_secret: secret }, options);
   }
 }

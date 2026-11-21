@@ -2,10 +2,14 @@ import type { IdempotentRequestOptions, RequestOptions } from "../../core/option
 import type { CursorPageParams, ListResult, PagePromise } from "../../core/pagination.js";
 import { ApiResource, path } from "../../core/resource.js";
 
-/** A user's state. `invited` users haven't accepted their invitation yet. */
-export type UserStatus = "active" | "invited" | "suspended" | (string & {});
+/**
+ * A user's state. `invited` users haven't accepted their invitation yet;
+ * `deleted` is only on a list that asked for deleted members too
+ * (`include_deleted`).
+ */
+export type UserStatus = "active" | "invited" | "suspended" | "deleted" | (string & {});
 
-/** Why, by whom and when an organisation's own user was suspended. */
+/** Why, by whom and when an organization's own user was suspended. */
 export interface UserSuspension {
   reason: string;
   source: string;
@@ -17,8 +21,8 @@ export interface UserSuspension {
 /** A user, as the API returns one. */
 export interface User {
   id: string;
-  /** The user's home organisation. */
-  tenant_id: string;
+  /** The user's home organization. */
+  organization_id: string;
   email: string;
   email_verified_at: string | null;
   phone: string | null;
@@ -26,11 +30,11 @@ export interface User {
   display_name: string | null;
   avatar_url: string | null;
   status: UserStatus;
-  /** Free-form data. Empty when the user's home is another organisation, which keeps it. */
+  /** Free-form data. Empty when the user's home is another organization, which keeps it. */
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-  /** Role names in the organisation reading the user; on lists and a member's own record. */
+  /** Role names in the organization reading the user; on lists and a member's own record. */
   roles?: string[];
   /** The same roles with their ids. */
   assigned_roles?: { id: string; name: string }[];
@@ -38,16 +42,18 @@ export interface User {
   groups_count?: number;
   last_seen_at?: string | null;
   last_seen_ip?: string | null;
-  /** The name of the organisation that manages the account. */
-  home_tenant_name?: string | null;
+  /** The name of the organization that manages the account. */
+  home_organization_name?: string | null;
   suspension?: UserSuspension;
+  /** When the user was deleted: only on a list with `include_deleted`, for someone since deleted. */
+  deleted_at?: string;
 }
 
 export interface UserCreateParams {
-  /** The organisation; must be the API key's own. */
-  tenant_id: string;
+  /** The organization; must be the API key's own. */
+  organization_id: string;
   email: string;
-  /** An initial password. It must meet the organisation's password rules. */
+  /** An initial password. It must meet the organization's password rules. */
   password?: string;
   display_name?: string;
   /** E.164, for example `+14155550100`. */
@@ -69,15 +75,29 @@ export interface UserUpdateParams {
 export interface UserListParams extends CursorPageParams {
   /** Matches the display name, email or phone, case-insensitively. */
   q?: string;
-  /** A role name in the organisation. */
+  /** A role name in the organization. */
   role?: string;
   /** Matches `metadata.department`. */
   department?: string;
-  /** Whether the user has a confirmed second factor. */
+  /** Whether the user has a confirmed second factor. Sent as `mfa=on` or `mfa=off`. */
   mfa?: boolean;
   email_verified?: boolean;
   status?: "active" | "invited" | "suspended";
   last_seen?: "today" | "week" | "month" | "older" | "never";
+  /** `true`: only owners and admins with no confirmed second factor; `false`: everyone else. */
+  admins_without_mfa?: boolean;
+  /** `true`: only members of at least one group; `false`: only members of none. */
+  in_group?: boolean;
+  /** Only these users, by id (up to 200). */
+  id?: readonly string[];
+  /** Only these users, by email address in any case (up to 200). */
+  email?: readonly string[];
+  /** Adds the members since deleted, each with `deleted_at` and status `deleted`. */
+  include_deleted?: boolean;
+  /** `created` (the default, newest first), `name` (A first) or `last_seen` (most recent first). Every order pages by cursor. */
+  sort?: "created" | "name" | "last_seen";
+  /** Reverses or keeps the sort's own direction. A cursor works only with the sort and order of the page that gave it. */
+  order?: "asc" | "desc";
 }
 
 /** A soft-deleted user, as the recycle bin shows it. */
@@ -106,8 +126,8 @@ export interface BulkUserRow {
 }
 
 export interface UserBulkCreateParams {
-  /** Optional; when present it must be the API key's own organisation. */
-  tenant_id?: string;
+  /** Optional; when present it must be the API key's own organization. */
+  organization_id?: string;
   /** A role every created user receives. */
   role_id?: string;
   /** 1 to 1000 rows. */
@@ -175,7 +195,7 @@ export interface UserSecurity {
   distinct_devices: number;
 }
 
-/** A user's access in the organisation: roles, groups and permission counts. */
+/** A user's access in the organization: roles, groups and permission counts. */
 export interface UserAccess {
   organization: { id: string; name: string; slug: string };
   roles: { id: string; name: string; description?: string }[];
@@ -187,7 +207,7 @@ export interface UserAccess {
   permissions_total: number;
 }
 
-/** What removing a member who belongs to another organisation took away here. */
+/** What removing a member who belongs to another organization took away here. */
 export interface MembershipRemoval {
   id: string;
   roles_removed: number;
@@ -198,16 +218,16 @@ export interface MembershipRemoval {
 export interface LinkedIdentity {
   id: string;
   user_id: string;
-  tenant_id: string;
+  organization_id: string;
   provider: string;
   subject: string;
   email: string | null;
   linked_at: string;
 }
 
-/** Manages the organisation's users. */
+/** Manages the organization's users. */
 export class Users extends ApiResource {
-  /** Creates a user in the API key's organisation. */
+  /** Creates a user in the API key's organization. */
   async create(params: UserCreateParams, options?: IdempotentRequestOptions): Promise<User> {
     return this._request({ method: "POST", path: "/v1/users", body: params, idempotent: true }, options);
   }
@@ -223,7 +243,7 @@ export class Users extends ApiResource {
   }
 
   /**
-   * Lists the API key's organisation's users, newest first. Await it for one
+   * Lists the API key's organization's users, newest first. Await it for one
    * page, or iterate it to walk them all:
    *
    * ```ts
@@ -231,7 +251,8 @@ export class Users extends ApiResource {
    * ```
    */
   list(params: UserListParams = {}, options?: RequestOptions): PagePromise<User> {
-    return this._page<User>("/v1/users", { ...params }, options);
+    const { mfa, ...rest } = params;
+    return this._page<User>("/v1/users", { ...rest, mfa: mfa === undefined ? undefined : mfa ? "on" : "off" }, options);
   }
 
   /** Suspends the user: they can't sign in, and every session of theirs ends. */
@@ -294,14 +315,14 @@ export class Users extends ApiResource {
     return this._request({ method: "POST", path: "/v1/users/bulk/import", query: { source }, rawBody: file, contentType }, options);
   }
 
-  /** Lists the user's live sessions in the organisation, most recently seen first. */
+  /** Lists the user's live sessions in the organization, most recently seen first. */
   async listSessions(userId: string, options?: RequestOptions): Promise<ListResult<UserSession>> {
     return this._list(path`/v1/users/${userId}/sessions`, undefined, options);
   }
 
   /** Ends one of the user's sessions. */
-  async revokeSession(tenantId: string, userId: string, sessionId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/users/${userId}/sessions/${sessionId}`, options);
+  async revokeSession(organizationId: string, userId: string, sessionId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/users/${userId}/sessions/${sessionId}`, options);
   }
 
   /** Signs the user out everywhere: sessions, hosted sign-in sessions and application refresh grants. */
@@ -314,12 +335,12 @@ export class Users extends ApiResource {
     return this._get(path`/v1/users/${userId}/security`, undefined, options);
   }
 
-  /** The user's roles, groups and permission counts in the organisation. */
+  /** The user's roles, groups and permission counts in the organization. */
   async getAccess(userId: string, options?: RequestOptions): Promise<UserAccess> {
     return this._get(path`/v1/users/${userId}/access`, undefined, options);
   }
 
-  /** Removes a member whose account belongs to another organisation from this one. Their account is left alone. */
+  /** Removes a member whose account belongs to another organization from this one. Their account is left alone. */
   async removeMembership(userId: string, options?: RequestOptions): Promise<MembershipRemoval> {
     return this._send("DELETE", path`/v1/users/${userId}/membership`, undefined, options);
   }

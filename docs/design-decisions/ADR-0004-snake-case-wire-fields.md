@@ -5,9 +5,9 @@
 ## Context
 
 The Go SDK's structs use Go-idiomatic `PascalCase` fields with a `json:"snake_case"`
-tag doing the translation declaratively (e.g. `TenantID string \`json:"tenant_id"\``).
+tag doing the translation declaratively (e.g. `OrganizationID string \`json:"organization_id"\``).
 TypeScript has no equivalent of a struct tag — a camelCase interface
-(`tenantId: string`) requires either (a) manually renaming every field at
+(`organizationId: string`) requires either (a) manually renaming every field at
 every call site that builds a request body or reads a response, or (b) a
 generic case-conversion layer applied centrally in the transport.
 
@@ -21,11 +21,11 @@ representing wire data stay snake_case.
 
 ```ts
 export interface CreateUserInput {
-  tenant_id: string; // snake_case: mirrors the wire exactly
+  organization_id: string; // snake_case: mirrors the wire exactly
   email?: string;
 }
 
-qeetId.users.create({ tenant_id: id, email }); // the method is camelCase; the input object's fields are not
+qeetId.users.create({ organization_id: id, email }); // the method is camelCase; the input object's fields are not
 ```
 
 ## Why not a camelCase mapping layer

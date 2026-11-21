@@ -15,7 +15,7 @@ and CommonJS (`.cjs`, `.d.cts`) output, one file per source module.
 ## Context inheritance
 
 ```text
-qeet-context (L0)  →  qeet-id-context (L1)  →  qeet-id-server (the contract)
+qeet-context (L0)  →  qeet-id-files (L1)  →  qeet-id-server (the contract)
                                             →  qeet-id-node (L2 — this document)
 ```
 

@@ -68,35 +68,39 @@ export interface RelationObject {
 /** Manages relationship tuples (ReBAC) and answers relationship checks. */
 export class Relationships extends ApiResource {
   /** Writes a tuple. */
-  async create(tenantId: string, params: RelationTupleCreateParams, options?: RequestOptions): Promise<RelationTuple> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/relation-tuples`, params, options);
+  async create(organizationId: string, params: RelationTupleCreateParams, options?: RequestOptions): Promise<RelationTuple> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/relation-tuples`, params, options);
   }
 
   /** Lists the tuples on an object (who has what on it) or of a subject (what it reaches). */
-  async list(tenantId: string, params: RelationTupleListParams, options?: RequestOptions): Promise<ListResult<RelationTuple>> {
-    return this._list(path`/v1/tenants/${tenantId}/relation-tuples`, { object: params.object, subject: params.subject }, options);
+  async list(organizationId: string, params: RelationTupleListParams, options?: RequestOptions): Promise<ListResult<RelationTuple>> {
+    return this._list(
+      path`/v1/organizations/${organizationId}/relation-tuples`,
+      { object: params.object, subject: params.subject },
+      options,
+    );
   }
 
-  async delete(tenantId: string, tupleId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/relation-tuples/${tupleId}`, options);
+  async delete(organizationId: string, tupleId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/relation-tuples/${tupleId}`, options);
   }
 
   /** Whether the user holds the relation on the object, following usersets. */
-  async check(tenantId: string, params: RelationCheckParams, options?: RequestOptions): Promise<boolean> {
-    const decision = await this.#check(tenantId, params, false, options);
+  async check(organizationId: string, params: RelationCheckParams, options?: RequestOptions): Promise<boolean> {
+    const decision = await this.#check(organizationId, params, false, options);
     return decision.allowed === true;
   }
 
   /** `check` with its reasons: the deciding model and the path of tuples. */
-  async explain(tenantId: string, params: RelationCheckParams, options?: RequestOptions): Promise<RelationDecision> {
-    return this.#check(tenantId, params, true, options);
+  async explain(organizationId: string, params: RelationCheckParams, options?: RequestOptions): Promise<RelationDecision> {
+    return this.#check(organizationId, params, true, options);
   }
 
-  async #check(tenantId: string, params: RelationCheckParams, explain: boolean, options?: RequestOptions): Promise<RelationDecision> {
+  async #check(organizationId: string, params: RelationCheckParams, explain: boolean, options?: RequestOptions): Promise<RelationDecision> {
     return this._request(
       {
         method: "POST",
-        path: path`/v1/tenants/${tenantId}/relation-tuples/check`,
+        path: path`/v1/organizations/${organizationId}/relation-tuples/check`,
         query: { explain: explain ? "true" : undefined },
         body: params,
         retrySafe: true,
@@ -106,17 +110,17 @@ export class Relationships extends ApiResource {
   }
 
   /** The graph of identities reachable from an object and relation. */
-  async graph(tenantId: string, params: RelationGraphParams, options?: RequestOptions): Promise<RelationGraph> {
-    return this._get(path`/v1/tenants/${tenantId}/relation-tuples/graph`, { ...params }, options);
+  async graph(organizationId: string, params: RelationGraphParams, options?: RequestOptions): Promise<RelationGraph> {
+    return this._get(path`/v1/organizations/${organizationId}/relation-tuples/graph`, { ...params }, options);
   }
 
   /** The object types the tuples name, with counts. */
-  async listTypes(tenantId: string, options?: RequestOptions): Promise<ListResult<RelationObjectType>> {
-    return this._list(path`/v1/tenants/${tenantId}/relation-tuples/types`, undefined, options);
+  async listTypes(organizationId: string, options?: RequestOptions): Promise<ListResult<RelationObjectType>> {
+    return this._list(path`/v1/organizations/${organizationId}/relation-tuples/types`, undefined, options);
   }
 
   /** The objects of one type the tuples name, a page at a time. */
-  listObjects(tenantId: string, params: CursorPageParams & { type: string }, options?: RequestOptions): PagePromise<RelationObject> {
-    return this._page(() => path`/v1/tenants/${tenantId}/relation-tuples/objects`, { ...params }, options);
+  listObjects(organizationId: string, params: CursorPageParams & { type: string }, options?: RequestOptions): PagePromise<RelationObject> {
+    return this._page(() => path`/v1/organizations/${organizationId}/relation-tuples/objects`, { ...params }, options);
   }
 }

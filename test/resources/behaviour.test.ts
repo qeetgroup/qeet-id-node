@@ -12,7 +12,7 @@ describe("ldapConnections.authenticate", () => {
     idle_expires_at: "2026-11-05T22:00:00Z",
     session_id: "s1",
     user_id: "u1",
-    tenant_id: "t1",
+    organization_id: "t1",
   };
 
   it("answers a token pair as { type: 'tokens' }, sending no API key and never retrying", async () => {
@@ -69,7 +69,7 @@ describe("invitations", () => {
   it("returns the invitation and its delivery, and no token", async () => {
     const invite = {
       id: "i1",
-      tenant_id: "t1",
+      organization_id: "t1",
       email: "ravi@brightleaffoods.in",
       role_id: null,
       status: "pending",
@@ -79,7 +79,7 @@ describe("invitations", () => {
       delivery: { status: "not_sent", code: "email.suppressed", message: "The address bounced before." },
     };
     const { client } = mockClient([{ status: 201, body: { invite } }]);
-    const result = await client.invitations.create({ tenant_id: "t1", email: "ravi@brightleaffoods.in" });
+    const result = await client.invitations.create({ organization_id: "t1", email: "ravi@brightleaffoods.in" });
     expect(result.invite.delivery?.code).toBe("email.suppressed");
     expect(Object.keys(result)).toEqual(["invite"]);
     // @ts-expect-error the API no longer returns the invitation's token
@@ -90,17 +90,17 @@ describe("invitations", () => {
 describe("checks", () => {
   it("permissions.check asks without explain and reads allowed", async () => {
     const { client, requests } = mockClient([{ body: { allowed: true } }]);
-    await expect(client.permissions.check({ user_id: "u1", tenant_id: "t1", permission: "invoice.write" })).resolves.toBe(true);
+    await expect(client.permissions.check({ user_id: "u1", organization_id: "t1", permission: "invoice.write" })).resolves.toBe(true);
     expect(Object.fromEntries(requests[0]?.url.searchParams ?? [])).toEqual({
       user_id: "u1",
-      tenant_id: "t1",
+      organization_id: "t1",
       permission: "invoice.write",
     });
   });
 
   it("permissions.explain asks with explain=true", async () => {
     const { client, requests } = mockClient([{ body: { allowed: false, reason_code: "authz.no_role_grant" } }]);
-    await expect(client.permissions.explain({ user_id: "u1", tenant_id: "t1", permission: "x" })).resolves.toMatchObject({
+    await expect(client.permissions.explain({ user_id: "u1", organization_id: "t1", permission: "x" })).resolves.toMatchObject({
       reason_code: "authz.no_role_grant",
     });
     expect(requests[0]?.url.searchParams.get("explain")).toBe("true");
@@ -126,9 +126,48 @@ describe("checks", () => {
 });
 
 describe("shapes the SDK adapts", () => {
-  it("ipRules.list returns the rules and whether they're enforced", async () => {
-    const { client } = mockClient([{ body: { enabled: true, items: [{ id: "r1" }] } }]);
-    await expect(client.ipRules.list("t1")).resolves.toEqual({ enabled: true, data: [{ id: "r1" }] });
+  it("ipRules.list returns the rules, whether they're enforced, and whether the list was capped", async () => {
+    const { client } = mockClient([
+      { body: { enabled: true, items: [{ id: "r1" }] } },
+      { body: { enabled: false, items: [], truncated: true } },
+    ]);
+    await expect(client.ipRules.list("t1")).resolves.toEqual({ enabled: true, data: [{ id: "r1" }], truncated: false });
+    await expect(client.ipRules.list("t1")).resolves.toEqual({ enabled: false, data: [], truncated: true });
+  });
+
+  it("users.list sends mfa as on or off, and repeats id and email", async () => {
+    const { client, requests } = mockClient([{ body: { items: [] } }, { body: { items: [] } }, { body: { items: [] } }]);
+    await client.users.list({
+      mfa: true,
+      id: ["u1", "u2"],
+      email: ["ana@brightleaffoods.in"],
+      admins_without_mfa: false,
+      in_group: true,
+      include_deleted: true,
+      sort: "last_seen",
+      order: "asc",
+    });
+    await client.users.list({ mfa: false });
+    await client.users.list();
+    const [first, second, third] = requests.map((r) => r.url.searchParams);
+    expect(first?.get("mfa")).toBe("on");
+    expect(first?.getAll("id")).toEqual(["u1", "u2"]);
+    expect(first?.getAll("email")).toEqual(["ana@brightleaffoods.in"]);
+    expect(Object.fromEntries([...(first?.entries() ?? [])].filter(([k]) => !["id", "email", "mfa"].includes(k)))).toEqual({
+      admins_without_mfa: "false",
+      in_group: "true",
+      include_deleted: "true",
+      sort: "last_seen",
+      order: "asc",
+    });
+    expect(second?.get("mfa")).toBe("off");
+    expect(third?.has("mfa")).toBe(false);
+  });
+
+  it("threatDetection.getBotActivity reads the page's detections from items", async () => {
+    const body = { items: [{ id: "b1", verdict: "blocked" }], total: 1, stats: { blocked_24h: 1, challenged_24h: 0, threshold: 70 } };
+    const { client } = mockClient([{ body }]);
+    await expect(client.threatDetection.getBotActivity("t1", { verdict: "blocked" })).resolves.toEqual(body);
   });
 
   it("roles.setPermissions returns the role's permissions as a list", async () => {
@@ -158,7 +197,9 @@ describe("shapes the SDK adapts", () => {
   });
 
   it("agents.createToken sends no API key", async () => {
-    const { client, requests } = mockClient([{ body: { access_token: "t", token_type: "Bearer", expires_in: 300 } }]);
+    const { client, requests } = mockClient([
+      { body: { access_token: "t", token_type: "Bearer", expires_in: 300, expires_at: "2026-11-05T09:35:00Z", scope: "" } },
+    ]);
     await client.agents.createToken("ag1", "agent-secret");
     expect(requests[0]?.headers.has("authorization")).toBe(false);
   });

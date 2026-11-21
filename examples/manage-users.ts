@@ -1,16 +1,16 @@
 // Creates a user safely across retries, walks every user, and handles the
 // errors worth handling.
 //
-//   QEET_ID_API_KEY=qk_… QEET_ID_TENANT_ID=… node --experimental-strip-types examples/manage-users.ts
+//   QEET_ID_API_KEY=qk_… QEET_ID_ORGANIZATION_ID=… node --experimental-strip-types examples/manage-users.ts
 import { ConflictError, QeetID, RateLimitError, ValidationError } from "../src/index.js";
 
 const qeetId = new QeetID({ apiKey: process.env.QEET_ID_API_KEY, appInfo: { name: "brightleaf-onboarding", version: "1.0.0" } });
-const tenantId = process.env.QEET_ID_TENANT_ID ?? "";
+const organizationId = process.env.QEET_ID_ORGANIZATION_ID ?? "";
 
 try {
   // A key derived from your own record makes a repeated run create the user once.
   const user = await qeetId.users.create(
-    { tenant_id: tenantId, email: "meera@brightleaffoods.in", display_name: "Meera Iyer", metadata: { department: "Finance" } },
+    { organization_id: organizationId, email: "meera@brightleaffoods.in", display_name: "Meera Iyer", metadata: { department: "Finance" } },
     { idempotencyKey: "onboarding-employee-1042" },
   );
   console.log("created", user.id);

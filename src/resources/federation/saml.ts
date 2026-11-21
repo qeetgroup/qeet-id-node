@@ -21,7 +21,7 @@ export interface SamlCertificate {
 /** An inbound SAML connection: Qeet ID is the service provider for an external identity provider. */
 export interface SamlConnection {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   name: string;
   /** Give these to the identity provider. */
   sp_entity_id: string;
@@ -56,7 +56,19 @@ export interface SamlConnectionCreateParams {
   status?: "draft" | "active" | "disabled";
 }
 
-export type SamlConnectionUpdateParams = Partial<SamlConnectionCreateParams>;
+/** The fields an update may change; one left out keeps its value. */
+export interface SamlConnectionUpdateParams {
+  name?: string;
+  idp_entity_id?: string;
+  idp_sso_url?: string;
+  idp_certificate?: string;
+  email_attribute?: string;
+  name_attribute?: string;
+  groups_attribute?: string;
+  status?: "draft" | "active" | "disabled";
+  /** Accept sign-ins the identity provider starts, with no request from Qeet ID. */
+  allow_idp_initiated?: boolean;
+}
 
 /** Creates a connection from the identity provider's metadata (a URL or the XML). */
 export interface SamlConnectionImportParams {
@@ -76,7 +88,7 @@ export interface ConnectionTestResult {
   checks: { name: string; ok: boolean; detail?: string }[];
 }
 
-/** Maps an identity provider group to one of the organisation's groups. */
+/** Maps an identity provider group to one of the organization's groups. */
 export interface SsoGroupMapping {
   id: string;
   idp_group: string;
@@ -92,75 +104,83 @@ export interface SsoGroupMappingCreateParams {
 
 /** Manages inbound SAML connections (Qeet ID as the service provider). */
 export class SamlConnections extends ApiResource {
-  async create(tenantId: string, params: SamlConnectionCreateParams, options?: RequestOptions): Promise<SamlConnection> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/saml`, params, options);
+  async create(organizationId: string, params: SamlConnectionCreateParams, options?: RequestOptions): Promise<SamlConnection> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/saml`, params, options);
   }
 
   /** Creates a connection from the identity provider's metadata. */
-  async import(tenantId: string, params: SamlConnectionImportParams, options?: RequestOptions): Promise<SamlConnection> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/saml/import`, params, options);
+  async import(organizationId: string, params: SamlConnectionImportParams, options?: RequestOptions): Promise<SamlConnection> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/saml/import`, params, options);
   }
 
-  async get(tenantId: string, connectionId: string, options?: RequestOptions): Promise<SamlConnection> {
-    return this._get(path`/v1/tenants/${tenantId}/saml/${connectionId}`, undefined, options);
+  async get(organizationId: string, connectionId: string, options?: RequestOptions): Promise<SamlConnection> {
+    return this._get(path`/v1/organizations/${organizationId}/saml/${connectionId}`, undefined, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<SamlConnection>> {
-    return this._list(path`/v1/tenants/${tenantId}/saml`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<SamlConnection>> {
+    return this._list(path`/v1/organizations/${organizationId}/saml`, undefined, options);
   }
 
   async update(
-    tenantId: string,
+    organizationId: string,
     connectionId: string,
     params: SamlConnectionUpdateParams,
     options?: RequestOptions,
   ): Promise<SamlConnection> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/saml/${connectionId}`, params, options);
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/saml/${connectionId}`, params, options);
   }
 
-  async delete(tenantId: string, connectionId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/saml/${connectionId}`, options);
+  async delete(organizationId: string, connectionId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/saml/${connectionId}`, options);
   }
 
   /** Updates the connection from the identity provider's metadata. */
   async updateMetadata(
-    tenantId: string,
+    organizationId: string,
     connectionId: string,
     params: { metadata_url?: string; metadata_xml?: string },
     options?: RequestOptions,
   ): Promise<SamlConnection> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/saml/${connectionId}/metadata`, params, options);
+    return this._send("POST", path`/v1/organizations/${organizationId}/saml/${connectionId}/metadata`, params, options);
   }
 
   /** Adds a signing certificate, for a rotation without downtime. */
-  async addCertificate(tenantId: string, connectionId: string, certificate: string, options?: RequestOptions): Promise<SamlCertificate> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/saml/${connectionId}/certificates`, { certificate }, options);
+  async addCertificate(
+    organizationId: string,
+    connectionId: string,
+    certificate: string,
+    options?: RequestOptions,
+  ): Promise<SamlCertificate> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/saml/${connectionId}/certificates`, { certificate }, options);
   }
 
-  async removeCertificate(tenantId: string, connectionId: string, certificateId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/saml/${connectionId}/certificates/${certificateId}`, options);
+  async removeCertificate(organizationId: string, connectionId: string, certificateId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/saml/${connectionId}/certificates/${certificateId}`, options);
   }
 
   /** Checks the configuration. */
-  async test(tenantId: string, connectionId: string, options?: RequestOptions): Promise<ConnectionTestResult> {
-    return this._request({ method: "POST", path: path`/v1/tenants/${tenantId}/saml/${connectionId}/test`, retrySafe: true }, options);
+  async test(organizationId: string, connectionId: string, options?: RequestOptions): Promise<ConnectionTestResult> {
+    return this._request(
+      { method: "POST", path: path`/v1/organizations/${organizationId}/saml/${connectionId}/test`, retrySafe: true },
+      options,
+    );
   }
 
-  async listGroupMappings(tenantId: string, connectionId: string, options?: RequestOptions): Promise<ListResult<SsoGroupMapping>> {
-    return this._list(path`/v1/tenants/${tenantId}/saml/${connectionId}/group-mappings`, undefined, options);
+  async listGroupMappings(organizationId: string, connectionId: string, options?: RequestOptions): Promise<ListResult<SsoGroupMapping>> {
+    return this._list(path`/v1/organizations/${organizationId}/saml/${connectionId}/group-mappings`, undefined, options);
   }
 
   async createGroupMapping(
-    tenantId: string,
+    organizationId: string,
     connectionId: string,
     params: SsoGroupMappingCreateParams,
     options?: RequestOptions,
   ): Promise<SsoGroupMapping> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/saml/${connectionId}/group-mappings`, params, options);
+    return this._send("POST", path`/v1/organizations/${organizationId}/saml/${connectionId}/group-mappings`, params, options);
   }
 
-  async deleteGroupMapping(tenantId: string, connectionId: string, mappingId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/saml/${connectionId}/group-mappings/${mappingId}`, options);
+  async deleteGroupMapping(organizationId: string, connectionId: string, mappingId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/saml/${connectionId}/group-mappings/${mappingId}`, options);
   }
 }
 
@@ -174,7 +194,7 @@ export interface SamlAttributeMapping {
 /** A downstream service provider that signs people in with Qeet ID as its SAML identity provider. */
 export interface SamlServiceProvider {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   name: string;
   entity_id: string;
   acs_url: string;
@@ -183,7 +203,7 @@ export interface SamlServiceProvider {
   certificate?: string;
   require_signed_requests?: boolean;
   encrypt_assertions?: boolean;
-  certificate_details?: { subject: string; fingerprint_sha256: string; not_before: string; not_after: string };
+  certificate_details?: { subject: string; fingerprint_sha256: string; not_before: string; not_after: string } | null;
   status: ConnectionStatus;
   attributes?: SamlAttributeMapping[];
   /** Only assigned users and groups may sign in to it. */
@@ -203,6 +223,7 @@ export interface SamlServiceProviderCreateParams {
   require_signed_requests?: boolean;
   encrypt_assertions?: boolean;
   attributes?: SamlAttributeMapping[];
+  status?: "draft" | "active" | "disabled";
   assignment_required?: boolean;
 }
 
@@ -216,63 +237,70 @@ export interface SamlServiceProviderAssignments {
 
 /** Manages the service providers that use Qeet ID as their SAML identity provider. */
 export class SamlServiceProviders extends ApiResource {
-  async create(tenantId: string, params: SamlServiceProviderCreateParams, options?: RequestOptions): Promise<SamlServiceProvider> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/saml-providers`, params, options);
+  async create(organizationId: string, params: SamlServiceProviderCreateParams, options?: RequestOptions): Promise<SamlServiceProvider> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/saml-providers`, params, options);
   }
 
-  async get(tenantId: string, serviceProviderId: string, options?: RequestOptions): Promise<SamlServiceProvider> {
-    return this._get(path`/v1/tenants/${tenantId}/saml-providers/${serviceProviderId}`, undefined, options);
+  async get(organizationId: string, serviceProviderId: string, options?: RequestOptions): Promise<SamlServiceProvider> {
+    return this._get(path`/v1/organizations/${organizationId}/saml-providers/${serviceProviderId}`, undefined, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<SamlServiceProvider>> {
-    return this._list(path`/v1/tenants/${tenantId}/saml-providers`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<SamlServiceProvider>> {
+    return this._list(path`/v1/organizations/${organizationId}/saml-providers`, undefined, options);
   }
 
   async update(
-    tenantId: string,
+    organizationId: string,
     serviceProviderId: string,
     params: SamlServiceProviderUpdateParams,
     options?: RequestOptions,
   ): Promise<SamlServiceProvider> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/saml-providers/${serviceProviderId}`, params, options);
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/saml-providers/${serviceProviderId}`, params, options);
   }
 
-  async delete(tenantId: string, serviceProviderId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/saml-providers/${serviceProviderId}`, options);
+  async delete(organizationId: string, serviceProviderId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/saml-providers/${serviceProviderId}`, options);
   }
 
-  async listAssignments(tenantId: string, serviceProviderId: string, options?: RequestOptions): Promise<SamlServiceProviderAssignments> {
+  async listAssignments(
+    organizationId: string,
+    serviceProviderId: string,
+    options?: RequestOptions,
+  ): Promise<SamlServiceProviderAssignments> {
     const response = await this._get<Partial<SamlServiceProviderAssignments>>(
-      path`/v1/tenants/${tenantId}/saml-providers/${serviceProviderId}/assignments`,
+      path`/v1/organizations/${organizationId}/saml-providers/${serviceProviderId}/assignments`,
       undefined,
       options,
     );
     return { users: response?.users ?? [], groups: response?.groups ?? [] };
   }
 
-  async assignUser(tenantId: string, serviceProviderId: string, userId: string, options?: RequestOptions): Promise<void> {
+  async assignUser(organizationId: string, serviceProviderId: string, userId: string, options?: RequestOptions): Promise<void> {
     await this._send(
       "POST",
-      path`/v1/tenants/${tenantId}/saml-providers/${serviceProviderId}/assignments/users/${userId}`,
+      path`/v1/organizations/${organizationId}/saml-providers/${serviceProviderId}/assignments/users/${userId}`,
       undefined,
       options,
     );
   }
 
-  async unassignUser(tenantId: string, serviceProviderId: string, userId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/saml-providers/${serviceProviderId}/assignments/users/${userId}`, options);
+  async unassignUser(organizationId: string, serviceProviderId: string, userId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/saml-providers/${serviceProviderId}/assignments/users/${userId}`, options);
   }
 
-  async assignGroup(tenantId: string, serviceProviderId: string, groupId: string, options?: RequestOptions): Promise<void> {
+  async assignGroup(organizationId: string, serviceProviderId: string, groupId: string, options?: RequestOptions): Promise<void> {
     await this._send(
       "POST",
-      path`/v1/tenants/${tenantId}/saml-providers/${serviceProviderId}/assignments/groups/${groupId}`,
+      path`/v1/organizations/${organizationId}/saml-providers/${serviceProviderId}/assignments/groups/${groupId}`,
       undefined,
       options,
     );
   }
 
-  async unassignGroup(tenantId: string, serviceProviderId: string, groupId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/saml-providers/${serviceProviderId}/assignments/groups/${groupId}`, options);
+  async unassignGroup(organizationId: string, serviceProviderId: string, groupId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(
+      path`/v1/organizations/${organizationId}/saml-providers/${serviceProviderId}/assignments/groups/${groupId}`,
+      options,
+    );
   }
 }

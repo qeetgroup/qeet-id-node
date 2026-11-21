@@ -8,7 +8,7 @@ export type AdminPortalCapability = "saml" | "scim" | "domain_verification";
 /** A time-limited link that lets a customer's IT administrator set up SSO, SCIM or domains without a Qeet ID account. */
 export interface AdminPortalLink {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   capabilities: AdminPortalCapability[];
   created_by: string | null;
   expires_at: string;
@@ -32,15 +32,15 @@ export interface AdminPortalLinkCreated {
 
 /** Manages admin portal links. */
 export class AdminPortalLinks extends ApiResource {
-  async create(tenantId: string, params: AdminPortalLinkCreateParams, options?: RequestOptions): Promise<AdminPortalLinkCreated> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/admin-portal/links`, params, options);
+  async create(organizationId: string, params: AdminPortalLinkCreateParams, options?: RequestOptions): Promise<AdminPortalLinkCreated> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/admin-portal/links`, params, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<AdminPortalLink>> {
-    return this._list(path`/v1/tenants/${tenantId}/admin-portal/links`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<AdminPortalLink>> {
+    return this._list(path`/v1/organizations/${organizationId}/admin-portal/links`, undefined, options);
   }
 
-  async revoke(tenantId: string, linkId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/admin-portal/links/${linkId}`, options);
+  async revoke(organizationId: string, linkId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/admin-portal/links/${linkId}`, options);
   }
 }

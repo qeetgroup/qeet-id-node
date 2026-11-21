@@ -5,8 +5,8 @@ import { ApiResource, path } from "../../core/resource.js";
 /** An API key's record. The key itself is shown only when it is created or rotated. */
 export interface ApiKey {
   id: string;
-  tenant_id: string;
-  /** The user a personal key acts for; null for an organisation key. */
+  organization_id: string;
+  /** The user a personal key acts for; null for an organization key. */
   user_id: string | null;
   name: string;
   /** The key's first characters, to recognise it by. */
@@ -22,7 +22,7 @@ export interface ApiKey {
 }
 
 export interface ApiKeyCreateParams {
-  tenant_id: string;
+  organization_id: string;
   name: string;
   /** Makes a personal key that acts for this user. */
   user_id?: string | null;
@@ -44,8 +44,8 @@ export class ApiKeys extends ApiResource {
     return this._request({ method: "POST", path: "/v1/api-keys", body: params, idempotent: true }, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<ApiKey>> {
-    return this._list(path`/v1/tenants/${tenantId}/api-keys`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<ApiKey>> {
+    return this._list(path`/v1/organizations/${organizationId}/api-keys`, undefined, options);
   }
 
   /**
@@ -53,12 +53,12 @@ export class ApiKeys extends ApiResource {
    * `overlap_hours`, so deployments can switch over without downtime.
    */
   async rotate(
-    tenantId: string,
+    organizationId: string,
     apiKeyId: string,
     params: { overlap_hours?: number } = {},
     options?: RequestOptions,
   ): Promise<ApiKeyCreated> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/api-keys/${apiKeyId}/rotate`, params, options);
+    return this._send("POST", path`/v1/organizations/${organizationId}/api-keys/${apiKeyId}/rotate`, params, options);
   }
 
   /** Revokes a key at once. */

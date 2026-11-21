@@ -178,13 +178,13 @@ function parseEvent<TData>(payload: string | Uint8Array): WebhookEvent<TData> {
     parsed === null ||
     typeof (parsed as Record<string, unknown>).id !== "string" ||
     typeof (parsed as Record<string, unknown>).type !== "string" ||
-    typeof (parsed as Record<string, unknown>).tenant_id !== "string" ||
+    typeof (parsed as Record<string, unknown>).organization_id !== "string" ||
     typeof (parsed as Record<string, unknown>).occurred_at !== "string" ||
     !("data" in parsed)
   ) {
     throw new WebhookVerificationError(
       "invalid_payload",
-      "The delivery's body is not a Qeet ID event (id, type, tenant_id, occurred_at, data).",
+      "The delivery's body is not a Qeet ID event (id, type, organization_id, occurred_at, data).",
     );
   }
   return parsed as WebhookEvent<TData>;

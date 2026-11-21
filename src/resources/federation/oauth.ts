@@ -2,6 +2,7 @@ import { AuthenticationError, PermissionDeniedError } from "../../core/errors.js
 import type { RequestOptions } from "../../core/options.js";
 import type { CursorPageParams, ListResult, PagePromise } from "../../core/pagination.js";
 import { ApiResource, path } from "../../core/resource.js";
+import { requestToken } from "./token-endpoint.js";
 
 /**
  * An OAuth client's credentials. A public client (a browser or mobile app)
@@ -28,7 +29,7 @@ export interface TokenResponse {
   issued_token_type?: string;
 }
 
-/** The client-credentials token endpoint's answer: a token with its lifetime and expiry. */
+/** The `client_credentials` grant's answer: a machine identity's own token, with its lifetime and expiry. */
 export interface ClientCredentialsToken {
   access_token: string;
   token_type: string;
@@ -36,7 +37,7 @@ export interface ClientCredentialsToken {
   expires_in: number;
   /** When the access token expires. */
   expires_at: string;
-  /** The service principal's scopes, space-separated. */
+  /** Every scope the service principal or agent holds, space-separated. */
   scope: string;
 }
 
@@ -99,7 +100,7 @@ export interface BackchannelAuthenticationParams {
   /** A confidential client: CIBA refuses public clients. */
   client_id: string;
   client_secret: string;
-  /** The person's email address in the client's organisation. */
+  /** The person's email address in the client's organization. */
   login_hint: string;
   scope?: string;
   /** Shown to the person in the approval request, such as a transaction reference. */
@@ -135,7 +136,7 @@ export interface Introspection {
   resource?: string | string[];
   exp?: number;
   iat?: number;
-  tenant_id?: string;
+  organization_id?: string;
   sid?: string;
   actor_type?: "user" | "service" | "agent" | (string & {});
   agent_id?: string;
@@ -203,30 +204,30 @@ const TOKEN_TYPE_ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";
 /** Consent grants people gave applications. */
 export class OAuthGrants extends ApiResource {
   /** Lists the grants, latest used first. */
-  list(tenantId: string, params: OAuthGrantListParams = {}, options?: RequestOptions): PagePromise<OAuthGrant> {
-    return this._page(() => path`/v1/tenants/${tenantId}/oauth/grants`, { ...params }, options);
+  list(organizationId: string, params: OAuthGrantListParams = {}, options?: RequestOptions): PagePromise<OAuthGrant> {
+    return this._page(() => path`/v1/organizations/${organizationId}/oauth/grants`, { ...params }, options);
   }
 
   /** Revokes one grant; the application must ask for consent again. */
-  async revoke(tenantId: string, grantId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/oauth/grants/${grantId}`, options);
+  async revoke(organizationId: string, grantId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/oauth/grants/${grantId}`, options);
   }
 
   /** Revokes several grants, or every grant to an application, in one step. */
-  async revokeMany(tenantId: string, params: OAuthGrantRevokeParams, options?: RequestOptions): Promise<{ revoked: number }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/oauth/grants/revoke`, params, options);
+  async revokeMany(organizationId: string, params: OAuthGrantRevokeParams, options?: RequestOptions): Promise<{ revoked: number }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/oauth/grants/revoke`, params, options);
   }
 }
 
 /** Device-flow authorizations, for review. */
 export class OAuthDevices extends ApiResource {
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<OAuthDeviceAuthorization>> {
-    return this._list(path`/v1/tenants/${tenantId}/oauth/devices`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<OAuthDeviceAuthorization>> {
+    return this._list(path`/v1/organizations/${organizationId}/oauth/devices`, undefined, options);
   }
 
   /** Revokes a device authorization; a grant it already bought ends too. */
-  async revoke(tenantId: string, deviceAuthorizationId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/oauth/devices/${deviceAuthorizationId}`, options);
+  async revoke(organizationId: string, deviceAuthorizationId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/oauth/devices/${deviceAuthorizationId}`, options);
   }
 }
 
@@ -243,9 +244,10 @@ export class SigningKeys extends ApiResource {
  * server: the token grants, introspection, revocation, the device and
  * backchannel (CIBA) flows, and the administration of grants and devices.
  *
- * The token endpoints answer errors in the RFC 6749 shape; they throw an
- * `OAuthError` whose `code` is the RFC `error` (`invalid_grant`,
- * `invalid_client`, …). They are never retried automatically: a grant is
+ * Every grant goes to the one token endpoint, `POST /v1/oauth/token`, which
+ * `grant_type` steers. It answers errors in the RFC 6749 shape; a grant
+ * throws an `OAuthError` whose `code` is the RFC `error` (`invalid_grant`,
+ * `invalid_client`, …). Grants are never retried automatically: a grant is
  * single-use.
  */
 export class OAuth extends ApiResource {
@@ -257,29 +259,31 @@ export class OAuth extends ApiResource {
   readonly signingKeys: SigningKeys = new SigningKeys(this._http);
 
   /**
-   * Gets a machine-to-machine token for a service principal (the
-   * `client_credentials` grant, at `POST /v1/oauth/token`). The token carries
-   * the principal's scopes.
+   * Gets a machine-to-machine token for a service principal or an AI agent
+   * (the `client_credentials` grant): `client_id` is the principal's or the
+   * agent's id, and `client_secret` its secret. The token carries every scope
+   * the identity holds. A disabled principal, or an agent that isn't active,
+   * is refused with `unauthorized_client`.
    */
   async clientCredentialsGrant(params: Required<ClientCredentials>, options?: RequestOptions): Promise<ClientCredentialsToken> {
-    return this.#token("/v1/oauth/token", { grant_type: "client_credentials", ...params }, options);
+    return this.#token({ grant_type: "client_credentials", ...params }, options);
   }
 
   /** Redeems an authorization code (with its PKCE verifier) for tokens. */
   async authorizationCodeGrant(params: AuthorizationCodeGrantParams, options?: RequestOptions): Promise<TokenResponse> {
-    return this.#token("/v1/oauth/token-code", { grant_type: "authorization_code", ...params }, options);
+    return this.#token({ grant_type: "authorization_code", ...params }, options);
   }
 
   /** Renews tokens with a refresh token. A refused refresh ends the application's refresh tokens for that person. */
   async refreshTokenGrant(params: RefreshTokenGrantParams, options?: RequestOptions): Promise<TokenResponse> {
-    return this.#token("/v1/oauth/token-code", { grant_type: "refresh_token", ...params }, options);
+    return this.#token({ grant_type: "refresh_token", ...params }, options);
   }
 
   /** RFC 8693 token exchange: downscope a token, or get one that acts for its subject. */
   async tokenExchangeGrant(params: TokenExchangeGrantParams, options?: RequestOptions): Promise<TokenResponse> {
     const form = { subject_token_type: TOKEN_TYPE_ACCESS_TOKEN, ...params };
     if (form.actor_token !== undefined && form.actor_token_type === undefined) form.actor_token_type = TOKEN_TYPE_ACCESS_TOKEN;
-    return this.#token("/v1/oauth/token-code", { grant_type: GRANT_TOKEN_EXCHANGE, ...form }, options);
+    return this.#token({ grant_type: GRANT_TOKEN_EXCHANGE, ...form }, options);
   }
 
   /**
@@ -288,12 +292,12 @@ export class OAuth extends ApiResource {
    * `interval` seconds longer); `access_denied` and `expired_token` end it.
    */
   async deviceCodeGrant(params: DeviceCodeGrantParams, options?: RequestOptions): Promise<TokenResponse> {
-    return this.#token("/v1/oauth/token-code", { grant_type: GRANT_DEVICE_CODE, ...params }, options);
+    return this.#token({ grant_type: GRANT_DEVICE_CODE, ...params }, options);
   }
 
   /** Polls for a CIBA request's tokens. Pending and refused requests throw like `deviceCodeGrant`. */
   async cibaGrant(params: CibaGrantParams, options?: RequestOptions): Promise<TokenResponse> {
-    return this.#token("/v1/oauth/token-code", { grant_type: GRANT_CIBA, ...params }, options);
+    return this.#token({ grant_type: GRANT_CIBA, ...params }, options);
   }
 
   /** Starts the RFC 8628 device flow for an input-constrained device. */
@@ -345,9 +349,8 @@ export class OAuth extends ApiResource {
     return new TokenGuard(this, options);
   }
 
-  async #token<T>(endpoint: string, form: Record<string, string | undefined>, options?: RequestOptions): Promise<T> {
-    // A grant is single-use; a retry after a lost answer would be refused, so none is made.
-    return this._request({ method: "POST", path: endpoint, form, authenticate: false }, { ...options, maxRetries: 0 });
+  async #token<T>(form: Record<string, string | undefined>, options?: RequestOptions): Promise<T> {
+    return requestToken<T>(this._http, form, options);
   }
 
   async #form<T>(endpoint: string, form: Record<string, string | undefined>, options?: RequestOptions): Promise<T> {

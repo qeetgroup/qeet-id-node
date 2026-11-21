@@ -5,7 +5,7 @@ import { ApiResource, path } from "../../core/resource.js";
 /** A webhook subscription: an endpoint and the events it receives. */
 export interface WebhookSubscription {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   url: string;
   events: string[];
   /** Set while disabled; null while enabled. */
@@ -30,7 +30,7 @@ export interface WebhookCreateParams {
   url: string;
   /** At least one event from the catalogue. */
   events: string[];
-  tenant_id?: string;
+  organization_id?: string;
 }
 
 export interface WebhookUpdateParams {
@@ -79,18 +79,22 @@ export class WebhookDeliveries extends ApiResource {
   }
 
   /** Sends again, each with fresh attempts, up to 1,000 of the subscription's given-up deliveries. */
-  async retryFailed(tenantId: string, webhookId: string, options?: RequestOptions): Promise<{ requeued: number }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/webhooks/${webhookId}/deliveries/retry`, undefined, options);
+  async retryFailed(organizationId: string, webhookId: string, options?: RequestOptions): Promise<{ requeued: number }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/webhooks/${webhookId}/deliveries/retry`, undefined, options);
   }
 
   /** Every attempt to send a delivery, oldest first. */
   async listAttempts(
-    tenantId: string,
+    organizationId: string,
     webhookId: string,
     deliveryId: string,
     options?: RequestOptions,
   ): Promise<ListResult<WebhookDeliveryAttempt>> {
-    return this._list(path`/v1/tenants/${tenantId}/webhooks/${webhookId}/deliveries/${deliveryId}/attempts`, undefined, options);
+    return this._list(
+      path`/v1/organizations/${organizationId}/webhooks/${webhookId}/deliveries/${deliveryId}/attempts`,
+      undefined,
+      options,
+    );
   }
 }
 
@@ -111,13 +115,18 @@ export class Webhooks extends ApiResource {
     return this._get(path`/v1/webhooks/${webhookId}`, undefined, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<WebhookSubscription>> {
-    return this._list(path`/v1/tenants/${tenantId}/webhooks`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<WebhookSubscription>> {
+    return this._list(path`/v1/organizations/${organizationId}/webhooks`, undefined, options);
   }
 
   /** Changes the URL, the events, or both. */
-  async update(tenantId: string, webhookId: string, params: WebhookUpdateParams, options?: RequestOptions): Promise<WebhookSubscription> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/webhooks/${webhookId}`, params, options);
+  async update(
+    organizationId: string,
+    webhookId: string,
+    params: WebhookUpdateParams,
+    options?: RequestOptions,
+  ): Promise<WebhookSubscription> {
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/webhooks/${webhookId}`, params, options);
   }
 
   /** Stops deliveries to the subscription. Undo with `enable`. */
@@ -126,8 +135,8 @@ export class Webhooks extends ApiResource {
   }
 
   /** Turns a disabled subscription back on; deliveries held meanwhile are then sent. */
-  async enable(tenantId: string, webhookId: string, options?: RequestOptions): Promise<WebhookSubscription> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/webhooks/${webhookId}/enable`, undefined, options);
+  async enable(organizationId: string, webhookId: string, options?: RequestOptions): Promise<WebhookSubscription> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/webhooks/${webhookId}/enable`, undefined, options);
   }
 
   /**
@@ -136,11 +145,11 @@ export class Webhooks extends ApiResource {
    * verify with both meanwhile.
    */
   async rotateSecret(
-    tenantId: string,
+    organizationId: string,
     webhookId: string,
     options?: RequestOptions,
   ): Promise<{ secret: string; previous_secret_expires_at: string }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/webhooks/${webhookId}/rotate-secret`, undefined, options);
+    return this._send("POST", path`/v1/organizations/${organizationId}/webhooks/${webhookId}/rotate-secret`, undefined, options);
   }
 
   /** Queues a `test.ping` event for this subscription alone. */
@@ -149,7 +158,7 @@ export class Webhooks extends ApiResource {
   }
 
   /** The catalogue of events a subscription can name. */
-  async listEventTypes(tenantId: string, options?: RequestOptions): Promise<ListResult<{ name: string; description: string }>> {
-    return this._list(path`/v1/tenants/${tenantId}/webhooks/events`, undefined, options);
+  async listEventTypes(organizationId: string, options?: RequestOptions): Promise<ListResult<{ name: string; description: string }>> {
+    return this._list(path`/v1/organizations/${organizationId}/webhooks/events`, undefined, options);
   }
 }

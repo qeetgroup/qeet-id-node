@@ -42,12 +42,12 @@ describe("constructWebhookEvent with deliveries the server signed", () => {
     expect(event).toEqual({
       id: "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d",
       type: "user.created",
-      tenant_id: "7d2f9a1c-3b4e-4c5d-8e6f-1a2b3c4d5e6f",
+      organization_id: "7d2f9a1c-3b4e-4c5d-8e6f-1a2b3c4d5e6f",
       occurred_at: "2026-11-05T09:30:00Z",
       data: {
         email: "ana@brightleaffoods.in",
         source: "admin",
-        tenant_id: "7d2f9a1c-3b4e-4c5d-8e6f-1a2b3c4d5e6f",
+        organization_id: "7d2f9a1c-3b4e-4c5d-8e6f-1a2b3c4d5e6f",
         user_id: "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
       },
     });
@@ -216,7 +216,7 @@ describe("signWebhookPayload", () => {
     const body = JSON.stringify({
       id: "e1",
       type: "group.created",
-      tenant_id: "t1",
+      organization_id: "t1",
       occurred_at: "2026-11-05T10:00:00Z",
       data: { group_id: "g1" },
     });

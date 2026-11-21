@@ -28,7 +28,7 @@ import { Branding } from "./resources/identity/branding.js";
 import { Domains } from "./resources/identity/domains.js";
 import { Groups } from "./resources/identity/groups.js";
 import { Invitations } from "./resources/identity/invitations.js";
-import { Tenants } from "./resources/identity/tenants.js";
+import { Organizations } from "./resources/identity/organizations.js";
 import { Users } from "./resources/identity/users.js";
 import { Analytics } from "./resources/operations/analytics.js";
 import { AuditLogs } from "./resources/operations/audit-logs.js";
@@ -79,8 +79,8 @@ export class QeetID {
   /** The base URL requests go to. */
   readonly baseUrl: string;
 
-  // Identity: the organisation, its people and groups.
-  readonly tenants: Tenants;
+  // Identity: the organization, its people and groups.
+  readonly organizations: Organizations;
   readonly domains: Domains;
   readonly users: Users;
   readonly groups: Groups;
@@ -145,7 +145,7 @@ export class QeetID {
       logger: options.logger,
     });
 
-    this.tenants = new Tenants(http);
+    this.organizations = new Organizations(http);
     this.domains = new Domains(http);
     this.users = new Users(http);
     this.groups = new Groups(http);

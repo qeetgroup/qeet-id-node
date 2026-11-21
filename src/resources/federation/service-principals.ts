@@ -5,7 +5,7 @@ import { ApiResource, path } from "../../core/resource.js";
 /** A machine identity that gets tokens with the `client_credentials` grant (see `client.oauth.clientCredentialsGrant`). */
 export interface ServicePrincipal {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   name: string;
   description: string;
   scopes: string[];
@@ -18,7 +18,7 @@ export interface ServicePrincipal {
 }
 
 export interface ServicePrincipalCreateParams {
-  tenant_id: string;
+  organization_id: string;
   name: string;
   description?: string;
   scopes?: string[];
@@ -46,8 +46,8 @@ export class ServicePrincipals extends ApiResource {
     return this._request({ method: "POST", path: "/v1/service-principals", body: params, idempotent: true }, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<ServicePrincipal>> {
-    return this._list(path`/v1/tenants/${tenantId}/service-principals`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<ServicePrincipal>> {
+    return this._list(path`/v1/organizations/${organizationId}/service-principals`, undefined, options);
   }
 
   /** Disables the principal: its secret gets no more tokens and the tokens it holds are refused at once. Undo with `enable`. */
@@ -56,8 +56,8 @@ export class ServicePrincipals extends ApiResource {
   }
 
   /** Turns a disabled principal back on. */
-  async enable(tenantId: string, servicePrincipalId: string, options?: RequestOptions): Promise<void> {
-    await this._send("POST", path`/v1/tenants/${tenantId}/service-principals/${servicePrincipalId}/enable`, undefined, options);
+  async enable(organizationId: string, servicePrincipalId: string, options?: RequestOptions): Promise<void> {
+    await this._send("POST", path`/v1/organizations/${organizationId}/service-principals/${servicePrincipalId}/enable`, undefined, options);
   }
 
   /**
@@ -65,11 +65,16 @@ export class ServicePrincipals extends ApiResource {
    * `overlap_hours` (default 24, at most 168; 0 stops it at once).
    */
   async rotateSecret(
-    tenantId: string,
+    organizationId: string,
     servicePrincipalId: string,
     params: { overlap_hours?: number } = {},
     options?: RequestOptions,
   ): Promise<ServicePrincipalSecret> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/service-principals/${servicePrincipalId}/rotate-secret`, params, options);
+    return this._send(
+      "POST",
+      path`/v1/organizations/${organizationId}/service-principals/${servicePrincipalId}/rotate-secret`,
+      params,
+      options,
+    );
   }
 }

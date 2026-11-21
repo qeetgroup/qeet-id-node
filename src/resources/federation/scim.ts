@@ -2,7 +2,7 @@ import type { RequestOptions } from "../../core/options.js";
 import type { CursorPageParams, ListResult, PagePromise } from "../../core/pagination.js";
 import { ApiResource, path } from "../../core/resource.js";
 
-/** The organisation's SCIM provisioning state. Tokens themselves are never returned after they are issued. */
+/** The organization's SCIM provisioning state. Tokens themselves are never returned after they are issued. */
 export interface ScimConfig {
   token_set: boolean;
   token_count: number;
@@ -67,48 +67,48 @@ export interface ScimGroup {
  * this SDK.
  */
 export class Scim extends ApiResource {
-  async getConfig(tenantId: string, options?: RequestOptions): Promise<ScimConfig> {
-    return this._get(path`/v1/tenants/${tenantId}/scim`, undefined, options);
+  async getConfig(organizationId: string, options?: RequestOptions): Promise<ScimConfig> {
+    return this._get(path`/v1/organizations/${organizationId}/scim`, undefined, options);
   }
 
-  async listTokens(tenantId: string, options?: RequestOptions): Promise<ListResult<ScimToken>> {
-    return this._list(path`/v1/tenants/${tenantId}/scim/tokens`, undefined, options);
+  async listTokens(organizationId: string, options?: RequestOptions): Promise<ListResult<ScimToken>> {
+    return this._list(path`/v1/organizations/${organizationId}/scim/tokens`, undefined, options);
   }
 
   /** Issues an additional token, shown once. */
   async createToken(
-    tenantId: string,
+    organizationId: string,
     params: { name: string; expires_at?: string | null },
     options?: RequestOptions,
   ): Promise<ScimTokenCreated> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/scim/tokens`, params, options);
+    return this._send("POST", path`/v1/organizations/${organizationId}/scim/tokens`, params, options);
   }
 
   /** Replaces a token with a new one, shown once; the old one keeps working for `overlap_hours`. */
   async rotateToken(
-    tenantId: string,
+    organizationId: string,
     tokenId: string,
     params: { overlap_hours?: number; expires_at?: string | null } = {},
     options?: RequestOptions,
   ): Promise<ScimTokenCreated & { replaced: ScimToken }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/scim/tokens/${tokenId}/rotate`, params, options);
+    return this._send("POST", path`/v1/organizations/${organizationId}/scim/tokens/${tokenId}/rotate`, params, options);
   }
 
   /** Revokes one token. */
-  async revokeToken(tenantId: string, tokenId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/scim/tokens/${tokenId}`, options);
+  async revokeToken(organizationId: string, tokenId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/scim/tokens/${tokenId}`, options);
   }
 
   /** Revokes every working token, which stops provisioning. */
-  async revokeAllTokens(tenantId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/scim/token`, options);
+  async revokeAllTokens(organizationId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/scim/token`, options);
   }
 
-  listUsers(tenantId: string, params: CursorPageParams = {}, options?: RequestOptions): PagePromise<ScimUser> {
-    return this._page(() => path`/v1/tenants/${tenantId}/scim/users`, { ...params }, options);
+  listUsers(organizationId: string, params: CursorPageParams = {}, options?: RequestOptions): PagePromise<ScimUser> {
+    return this._page(() => path`/v1/organizations/${organizationId}/scim/users`, { ...params }, options);
   }
 
-  listGroups(tenantId: string, params: CursorPageParams = {}, options?: RequestOptions): PagePromise<ScimGroup> {
-    return this._page(() => path`/v1/tenants/${tenantId}/scim/groups`, { ...params }, options);
+  listGroups(organizationId: string, params: CursorPageParams = {}, options?: RequestOptions): PagePromise<ScimGroup> {
+    return this._page(() => path`/v1/organizations/${organizationId}/scim/groups`, { ...params }, options);
   }
 }

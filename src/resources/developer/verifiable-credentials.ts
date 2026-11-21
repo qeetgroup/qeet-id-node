@@ -19,7 +19,7 @@ export interface VerifiableCredentialIssueParams {
   type: string;
   claims?: Record<string, unknown>;
   ttl_seconds?: number;
-  /** One of the organisation's users the credential is about. */
+  /** One of the organization's users the credential is about. */
   user_id?: string | null;
 }
 
@@ -42,17 +42,17 @@ export interface CredentialVerification {
 
 /** Issues, lists, revokes and verifies W3C verifiable credentials (JWT-VC). */
 export class VerifiableCredentials extends ApiResource {
-  async issue(tenantId: string, params: VerifiableCredentialIssueParams, options?: RequestOptions): Promise<IssuedCredential> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/credentials`, params, options);
+  async issue(organizationId: string, params: VerifiableCredentialIssueParams, options?: RequestOptions): Promise<IssuedCredential> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/credentials`, params, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<VerifiableCredential>> {
-    return this._list(path`/v1/tenants/${tenantId}/credentials`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<VerifiableCredential>> {
+    return this._list(path`/v1/organizations/${organizationId}/credentials`, undefined, options);
   }
 
-  async revoke(tenantId: string, credentialId: string, options?: RequestOptions): Promise<void> {
+  async revoke(organizationId: string, credentialId: string, options?: RequestOptions): Promise<void> {
     await this._request(
-      { method: "POST", path: path`/v1/tenants/${tenantId}/credentials/${credentialId}/revoke`, retrySafe: true },
+      { method: "POST", path: path`/v1/organizations/${organizationId}/credentials/${credentialId}/revoke`, retrySafe: true },
       options,
     );
   }

@@ -5,7 +5,7 @@ import { ApiResource, path } from "../../core/resource.js";
 /** A group of users, optionally nested under a parent. Members inherit the group's roles. */
 export interface Group {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   parent_id: string | null;
   name: string;
   description: string;
@@ -15,11 +15,11 @@ export interface Group {
   roles?: { role_id: string; name: string }[];
 }
 
+/** A new group, in the API key's organization. */
 export interface GroupCreateParams {
-  tenant_id: string;
   name: string;
   description?: string;
-  /** One of the organisation's groups; omit or null for a top-level group. */
+  /** One of the organization's groups; omit or null for a top-level group. */
   parent_id?: string | null;
 }
 
@@ -65,8 +65,8 @@ export class Groups extends ApiResource {
     return this._delete(path`/v1/groups/${groupId}`, options);
   }
 
-  async list(tenantId: string, params: GroupListParams = {}, options?: RequestOptions): Promise<ListResult<Group>> {
-    return this._list(path`/v1/tenants/${tenantId}/groups`, { ...params }, options);
+  async list(organizationId: string, params: GroupListParams = {}, options?: RequestOptions): Promise<ListResult<Group>> {
+    return this._list(path`/v1/organizations/${organizationId}/groups`, { ...params }, options);
   }
 
   async listMembers(groupId: string, options?: RequestOptions): Promise<ListResult<GroupMember>> {
@@ -83,16 +83,16 @@ export class Groups extends ApiResource {
   }
 
   /** Lists the roles granted to the group. */
-  async listRoles(tenantId: string, groupId: string, options?: RequestOptions): Promise<ListResult<GroupRole>> {
-    return this._list(path`/v1/tenants/${tenantId}/groups/${groupId}/roles`, undefined, options);
+  async listRoles(organizationId: string, groupId: string, options?: RequestOptions): Promise<ListResult<GroupRole>> {
+    return this._list(path`/v1/organizations/${organizationId}/groups/${groupId}/roles`, undefined, options);
   }
 
   /** Grants a role to the group; every member inherits it. */
-  async grantRole(tenantId: string, groupId: string, roleId: string, options?: RequestOptions): Promise<void> {
-    await this._send("POST", path`/v1/tenants/${tenantId}/groups/${groupId}/roles/${roleId}`, undefined, options);
+  async grantRole(organizationId: string, groupId: string, roleId: string, options?: RequestOptions): Promise<void> {
+    await this._send("POST", path`/v1/organizations/${organizationId}/groups/${groupId}/roles/${roleId}`, undefined, options);
   }
 
-  async revokeRole(tenantId: string, groupId: string, roleId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/groups/${groupId}/roles/${roleId}`, options);
+  async revokeRole(organizationId: string, groupId: string, roleId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/groups/${groupId}/roles/${roleId}`, options);
   }
 }

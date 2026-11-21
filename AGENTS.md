@@ -11,7 +11,7 @@ and Biome, **zero runtime dependencies**, built by tsdown into ES module and Com
 declarations. Not yet published.
 
 It is a **client of a contract it does not own.** The contract is `qeet-id-server`'s five OpenAPI
-documents (`api/openapi/{auth,management,federation,developer,operations}.yaml`), with the server's
+documents (`api/openapi/{identity,access,federation,developer,operations}.yaml`), with the server's
 handlers and route policy (`internal/bootstrap/permissions.go`) as the tiebreaker. The SDK wraps them
 and never adds behaviour the API lacks.
 

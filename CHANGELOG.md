@@ -6,6 +6,66 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-21
+
+Follows the Qeet ID API, which now says organization where it said tenant and serves every OAuth
+grant at one token endpoint. The API accepts only the new names, so 0.1.0 can no longer reach the
+calls below: upgrade, and rename as listed.
+
+### Changed
+
+- **`tenants` is `organizations`** (`qeetId.organizations.get`, `update`, `delete`, `cancelDeletion`),
+  and the types follow: `Tenant` → `Organization`, `TenantUpdateParams` → `OrganizationUpdateParams`,
+  `TenantDeletion` → `OrganizationDeletion`, `TenantBranding` → `OrganizationBranding`,
+  `TenantRateLimits` → `OrganizationRateLimits`. Every `tenantId` argument is `organizationId`.
+- **Paths:** every `/v1/tenants/{tenantID}/…` call goes to `/v1/organizations/{organizationID}/…`, and
+  `roles.assign`, `roles.unassign` and `permissions.listEffective` to
+  `/v1/users/{userID}/organizations/{organizationID}/…`.
+- **Fields:** every `tenant_id` is `organization_id`: in requests and answers, the webhook event's
+  envelope, introspection and `AccessTokenClaims` (the access token's claim). A user's
+  `home_tenant_name` is `home_organization_name`.
+- **Values:** the rate-limit bucket `tenant` is `organization`, an email template's `delivery_scope`
+  `"tenant"` is `"organization"`, a permission check's deciding `model` `"tenant"` is `"organization"`,
+  and the webhook events `tenant.suspended`, `tenant.reactivated` and `tenant.deleted` are
+  `organization.suspended`, `organization.reactivated` and `organization.deleted`.
+- **One token endpoint:** `authorizationCodeGrant`, `refreshTokenGrant`, `tokenExchangeGrant`,
+  `deviceCodeGrant` and `cibaGrant` post to `POST /v1/oauth/token`, as `clientCredentialsGrant` does;
+  `/v1/oauth/token-code` is gone from the API.
+- **Agent tokens:** `agents.createToken(agentId, secret)` is the `client_credentials` grant at
+  `/v1/oauth/token`, with the agent's id as `client_id` and its secret as `client_secret`
+  (`/v1/agents/token` is gone). A refusal throws `OAuthError` (`invalid_client`, or
+  `unauthorized_client` for an agent that isn't active), and it is never retried. `AgentToken` is
+  `ClientCredentialsToken`, with `expires_at` and `scope`.
+- **`Organization` follows the API document:** it carries `logo_url`, its plan may be `starter`, its
+  `metadata` may be null and `deletion_due_at` is always present (null when no deletion is scheduled).
+  `OrganizationUpdateParams` takes `logo_url`, and no longer `plan`, which an update doesn't take.
+- **Request fields the API doesn't take are gone:** `GroupCreateParams.organization_id` (a group is
+  created in the API key's organization); the security policy's `password_min_length` and
+  `password_complexity` (ignored and never returned: password rules are `authPolicies`'), with
+  `update` and `replace` taking `SecurityPolicyUpdateParams`, without the read-only
+  `mfa_enforced_since`; and the branding's `email_from_address` (ignored and never returned).
+- **`auditLogs.anomalies.updateSettings`** takes `AuditAnomalySettingsUpdateParams`, all three
+  settings required as the API replaces them all; the answer, `AuditAnomalySettings`, carries
+  `organization_id`.
+- **`threatDetection.getBotActivity`** reads the page's detections from `items`
+  (`BotActivity.items`; the API sends no `recent`).
+- **`SamlConnectionUpdateParams`** is its own type, with `allow_idp_initiated`.
+
+### Added
+
+- **`users.list` filters:** `admins_without_mfa`, `in_group`, `id` and `email` (repeated, up to 200
+  each), `include_deleted`, and `sort` (`created`, `name`, `last_seen`) with `order`, paged by cursor in
+  every order. `User` carries `deleted_at`, and its status may be `deleted`, on a list that includes
+  deleted members.
+- `ipRules.list` reports `truncated`; `AuthHook.previous_secret_expires_at`; SAML service providers
+  take `status` on create and update, and their `certificate_details` may be null; the audit chain's
+  `reason_code` may be `audit.chain_checkpoint_gone` or `audit.chain_checkpoint_unsigned`.
+
+### Fixed
+
+- `users.list({ mfa })` sends `mfa=on` or `mfa=off`, as the API takes it; `true` and `false` were
+  refused with 400.
+
 ## [0.1.0] — 2026-11-05
 
 The first published version: a rework of the whole SDK against the API as it is today. The 0.1.0
@@ -207,5 +267,6 @@ ahead of the sibling Go SDK, which does not yet have them. See
 the folder layout and [docs/design-decisions/](docs/design-decisions/) for
 every Node-specific API-shape trade-off.
 
-[Unreleased]: https://github.com/qeetgroup/qeet-id-node/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/qeetgroup/qeet-id-node/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/qeetgroup/qeet-id-node/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/qeetgroup/qeet-id-node/releases/tag/v0.1.0

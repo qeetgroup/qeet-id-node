@@ -61,7 +61,7 @@ export interface AnalyticsOverviewParams {
 
 /** Sign-in analytics. */
 export class Analytics extends ApiResource {
-  async getOverview(tenantId: string, params: AnalyticsOverviewParams = {}, options?: RequestOptions): Promise<AnalyticsOverview> {
-    return this._get(path`/v1/tenants/${tenantId}/analytics/overview`, { ...params }, options);
+  async getOverview(organizationId: string, params: AnalyticsOverviewParams = {}, options?: RequestOptions): Promise<AnalyticsOverview> {
+    return this._get(path`/v1/organizations/${organizationId}/analytics/overview`, { ...params }, options);
   }
 }

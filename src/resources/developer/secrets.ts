@@ -34,27 +34,27 @@ export interface SecretUpdateParams {
   rotation_interval_days?: number | null;
 }
 
-/** The organisation's encrypted secrets store. */
+/** The organization's encrypted secrets store. */
 export class Secrets extends ApiResource {
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<Secret>> {
-    return this._list(path`/v1/tenants/${tenantId}/secrets`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<Secret>> {
+    return this._list(path`/v1/organizations/${organizationId}/secrets`, undefined, options);
   }
 
-  async create(tenantId: string, params: SecretCreateParams, options?: RequestOptions): Promise<Secret> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/secrets`, params, options);
+  async create(organizationId: string, params: SecretCreateParams, options?: RequestOptions): Promise<Secret> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/secrets`, params, options);
   }
 
-  async update(tenantId: string, secretId: string, params: SecretUpdateParams, options?: RequestOptions): Promise<Secret> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/secrets/${secretId}`, params, options);
+  async update(organizationId: string, secretId: string, params: SecretUpdateParams, options?: RequestOptions): Promise<Secret> {
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/secrets/${secretId}`, params, options);
   }
 
-  async delete(tenantId: string, secretId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/secrets/${secretId}`, options);
+  async delete(organizationId: string, secretId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/secrets/${secretId}`, options);
   }
 
   /** Returns the secret's value. Audited. */
-  async reveal(tenantId: string, secretId: string, options?: RequestOptions): Promise<{ value: string }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/secrets/${secretId}/reveal`, undefined, options);
+  async reveal(organizationId: string, secretId: string, options?: RequestOptions): Promise<{ value: string }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/secrets/${secretId}/reveal`, undefined, options);
   }
 
   /** Returns a secret's value by name. Needs the `vault:read` scope for it. */

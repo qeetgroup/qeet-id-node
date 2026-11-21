@@ -28,7 +28,7 @@ const claims = (extra: Record<string, unknown> = {}) => ({
   aud: [AUDIENCE],
   sub: "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
   user_id: "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
-  tenant_id: "7d2f9a1c-3b4e-4c5d-8e6f-1a2b3c4d5e6f",
+  organization_id: "7d2f9a1c-3b4e-4c5d-8e6f-1a2b3c4d5e6f",
   sid: "0b6f5c2e-6f1a-4b8e-9c3d-2a7e5f1c9d40",
   scope: "openid profile",
   iat: now(),
@@ -65,7 +65,12 @@ describe("TokenVerifier", () => {
 
     const verified = await verifier.verify(await sign(key, claims()));
 
-    expect(verified).toMatchObject({ sub: claims().sub, tenant_id: claims().tenant_id, sid: claims().sid, scope: "openid profile" });
+    expect(verified).toMatchObject({
+      sub: claims().sub,
+      organization_id: claims().organization_id,
+      sid: claims().sid,
+      scope: "openid profile",
+    });
     expect(server.calls).toEqual(["https://api.id.qeet.in/.well-known/jwks.json"]);
   });
 

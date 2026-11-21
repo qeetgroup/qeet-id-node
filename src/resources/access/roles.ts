@@ -6,7 +6,7 @@ import type { Permission } from "./permissions.js";
 /** A role: a named set of permissions. Built-in roles (`owner`, `admin`, `member`, `viewer`) have `is_system` set and can't change. */
 export interface Role {
   id: string;
-  tenant_id: string;
+  organization_id: string;
   name: string;
   description?: string;
   is_system: boolean;
@@ -35,24 +35,24 @@ export interface RoleHolders {
 
 /** Manages roles, the permissions they grant, and who holds them. */
 export class Roles extends ApiResource {
-  /** Lists the organisation's roles, built-in and custom. */
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<Role>> {
-    return this._list(path`/v1/tenants/${tenantId}/roles`, undefined, options);
+  /** Lists the organization's roles, built-in and custom. */
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<Role>> {
+    return this._list(path`/v1/organizations/${organizationId}/roles`, undefined, options);
   }
 
   /** Creates a custom role with no permissions; grant them with `grantPermission` or `setPermissions`. */
-  async create(tenantId: string, params: RoleCreateParams, options?: RequestOptions): Promise<Role> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/roles`, params, options);
+  async create(organizationId: string, params: RoleCreateParams, options?: RequestOptions): Promise<Role> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/roles`, params, options);
   }
 
   /** Renames a custom role or changes its description. */
-  async update(tenantId: string, roleId: string, params: RoleUpdateParams, options?: RequestOptions): Promise<Role> {
-    return this._send("PATCH", path`/v1/tenants/${tenantId}/roles/${roleId}`, params, options);
+  async update(organizationId: string, roleId: string, params: RoleUpdateParams, options?: RequestOptions): Promise<Role> {
+    return this._send("PATCH", path`/v1/organizations/${organizationId}/roles/${roleId}`, params, options);
   }
 
   /** Deletes a custom role. Refused with 409 `rbac.role_in_use` while anyone holds it. */
-  async delete(tenantId: string, roleId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/roles/${roleId}`, options);
+  async delete(organizationId: string, roleId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/roles/${roleId}`, options);
   }
 
   /** Lists the permissions the role grants. */
@@ -62,14 +62,14 @@ export class Roles extends ApiResource {
 
   /** Makes `permissionIds` the whole of a custom role's permissions, in one step, and returns them. */
   async setPermissions(
-    tenantId: string,
+    organizationId: string,
     roleId: string,
     permissionIds: string[],
     options?: RequestOptions,
   ): Promise<ListResult<Permission>> {
     return this._send<{ items?: Permission[] }>(
       "PUT",
-      path`/v1/tenants/${tenantId}/roles/${roleId}/permissions`,
+      path`/v1/organizations/${organizationId}/roles/${roleId}/permissions`,
       { permission_ids: permissionIds },
       options,
     ).then((response) => ({ data: response?.items ?? [], truncated: false }));
@@ -86,21 +86,21 @@ export class Roles extends ApiResource {
 
   /** One page of the people holding the role, and every group granted it. */
   async listHolders(
-    tenantId: string,
+    organizationId: string,
     roleId: string,
     params: { limit?: number; cursor?: string } = {},
     options?: RequestOptions,
   ): Promise<RoleHolders> {
-    return this._get(path`/v1/tenants/${tenantId}/roles/${roleId}/holders`, { ...params }, options);
+    return this._get(path`/v1/organizations/${organizationId}/roles/${roleId}/holders`, { ...params }, options);
   }
 
-  /** Assigns a role to a user in the organisation. Assigning it twice changes nothing. */
-  async assign(tenantId: string, userId: string, roleId: string, options?: RequestOptions): Promise<void> {
-    await this._send("POST", path`/v1/users/${userId}/tenants/${tenantId}/roles/${roleId}`, undefined, options);
+  /** Assigns a role to a user in the organization. Assigning it twice changes nothing. */
+  async assign(organizationId: string, userId: string, roleId: string, options?: RequestOptions): Promise<void> {
+    await this._send("POST", path`/v1/users/${userId}/organizations/${organizationId}/roles/${roleId}`, undefined, options);
   }
 
   /** Removes a directly assigned role from a user. A group may still grant it. */
-  async unassign(tenantId: string, userId: string, roleId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/users/${userId}/tenants/${tenantId}/roles/${roleId}`, options);
+  async unassign(organizationId: string, userId: string, roleId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/users/${userId}/organizations/${organizationId}/roles/${roleId}`, options);
   }
 }

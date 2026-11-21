@@ -7,19 +7,19 @@ What this SDK doesn't cover yet, and why.
 These exist in `qeet-id-server` and accept an API key. They were left for a later release to keep this
 one reviewable; each is additive.
 
-- **Attribute-based access control** — `/v1/tenants/{tenantID}/abac/*` (policies, versions,
+- **Attribute-based access control** — `/v1/organizations/{organizationID}/abac/*` (policies, versions,
   evaluate).
-- **Directory sync** — `/v1/tenants/{tenantID}/directory/*` (connection mappings, errors, activity,
+- **Directory sync** — `/v1/organizations/{organizationID}/directory/*` (connection mappings, errors, activity,
   alerts, profiles).
-- **OpenID Connect enterprise connections** — `/v1/tenants/{tenantID}/oidc-connections`.
-- **Compliance evidence** — `/v1/tenants/{tenantID}/compliance/*`.
+- **OpenID Connect enterprise connections** — `/v1/organizations/{organizationID}/oidc-connections`.
+- **Compliance evidence** — `/v1/organizations/{organizationID}/compliance/*`.
 - **Activity feed and search** — `/v1/activity*`; `/v1/search` is user-only today.
 - **Group templates and import** — `/v1/groups/templates*`, `/v1/groups/import`.
 - **User administration extras** — suspended-user review (`/v1/users/suspended`,
   `PUT /v1/users/{id}/suspension`), statistics and trends, trusted and push devices, passkeys,
   sign-in history, break-glass members and login-domain checks.
 - **Email delivery** — messages and suppressions.
-- **Qeet AI tenant settings and usage**, **service health**, **billing trial**.
+- **Qeet AI organization settings and usage**, **service health**, **billing trial**.
 
 ## Not wrapped on purpose
 
@@ -32,4 +32,4 @@ connected accounts; notifications; Qeet AI conversations. The browser SDK and ho
 
 - A brokered call for the token vault, so code never handles a raw third-party token
   (`tokenVault.getAccessToken` is deprecated until then).
-- Nested organisations and workload identity (SPIFFE), once the server has them.
+- Nested organizations and workload identity (SPIFFE), once the server has them.

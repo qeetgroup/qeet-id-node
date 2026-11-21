@@ -79,21 +79,25 @@ describe("whole lists", () => {
   });
 
   it.each([
-    ["agents", (c: import("../../src/index.js").QeetID) => c.agents.list("t1"), "/v1/tenants/t1/agents"],
+    ["agents", (c: import("../../src/index.js").QeetID) => c.agents.list("t1"), "/v1/organizations/t1/agents"],
     [
       "sponsored agents",
       (c: import("../../src/index.js").QeetID) => c.agents.listSponsoredBy("t1", "u1"),
-      "/v1/tenants/t1/agents/sponsored-by/u1",
+      "/v1/organizations/t1/agents/sponsored-by/u1",
     ],
-    ["secrets", (c: import("../../src/index.js").QeetID) => c.secrets.list("t1"), "/v1/tenants/t1/secrets"],
+    ["secrets", (c: import("../../src/index.js").QeetID) => c.secrets.list("t1"), "/v1/organizations/t1/secrets"],
     ["group members", (c: import("../../src/index.js").QeetID) => c.groups.listMembers("g1"), "/v1/groups/g1/members"],
     [
       "relationship tuples",
       (c: import("../../src/index.js").QeetID) => c.relationships.list("t1", { object: "doc:1" }),
-      "/v1/tenants/t1/relation-tuples",
+      "/v1/organizations/t1/relation-tuples",
     ],
-    ["device authorizations", (c: import("../../src/index.js").QeetID) => c.oauth.devices.list("t1"), "/v1/tenants/t1/oauth/devices"],
-    ["admin portal links", (c: import("../../src/index.js").QeetID) => c.adminPortalLinks.list("t1"), "/v1/tenants/t1/admin-portal/links"],
+    ["device authorizations", (c: import("../../src/index.js").QeetID) => c.oauth.devices.list("t1"), "/v1/organizations/t1/oauth/devices"],
+    [
+      "admin portal links",
+      (c: import("../../src/index.js").QeetID) => c.adminPortalLinks.list("t1"),
+      "/v1/organizations/t1/admin-portal/links",
+    ],
   ])("passes truncated through for %s", async (_name, call, path) => {
     const { client, requests } = mockClient([{ body: { items: [], truncated: true } }]);
     await expect(call(client)).resolves.toMatchObject({ truncated: true });

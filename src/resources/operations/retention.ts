@@ -11,27 +11,27 @@ export interface RetentionPolicy {
   updated_by_email?: string;
 }
 
-/** Manages the organisation's data-retention policy. */
+/** Manages the organization's data-retention policy. */
 export class Retention extends ApiResource {
-  async get(tenantId: string, options?: RequestOptions): Promise<RetentionPolicy> {
-    return this._get(path`/v1/tenants/${tenantId}/retention`, undefined, options);
+  async get(organizationId: string, options?: RequestOptions): Promise<RetentionPolicy> {
+    return this._get(path`/v1/organizations/${organizationId}/retention`, undefined, options);
   }
 
   async update(
-    tenantId: string,
+    organizationId: string,
     policy: Pick<RetentionPolicy, "deleted_users_enabled" | "deleted_users_days">,
     options?: RequestOptions,
   ): Promise<RetentionPolicy> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/retention`, policy, options);
+    return this._send("PUT", path`/v1/organizations/${organizationId}/retention`, policy, options);
   }
 
   /** Counts what the policy would purge now. Deletes nothing. */
-  async preview(tenantId: string, options?: RequestOptions): Promise<{ ripe_deleted_users: number; deleted_users_days: number }> {
-    return this._request({ method: "POST", path: path`/v1/tenants/${tenantId}/retention/preview`, retrySafe: true }, options);
+  async preview(organizationId: string, options?: RequestOptions): Promise<{ ripe_deleted_users: number; deleted_users_days: number }> {
+    return this._request({ method: "POST", path: path`/v1/organizations/${organizationId}/retention/preview`, retrySafe: true }, options);
   }
 
   /** Purges what is due now, ahead of the scheduled run. */
-  async run(tenantId: string, options?: RequestOptions): Promise<{ purged: number }> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/retention/run`, undefined, options);
+  async run(organizationId: string, options?: RequestOptions): Promise<{ purged: number }> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/retention/run`, undefined, options);
   }
 }

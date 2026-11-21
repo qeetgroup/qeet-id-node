@@ -31,30 +31,30 @@ export interface LogSinkTestResult {
 
 /** Manages audit-log streaming to SIEMs. */
 export class LogSinks extends ApiResource {
-  async create(tenantId: string, params: LogSinkCreateParams, options?: RequestOptions): Promise<LogSink> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/log-sinks`, params, options);
+  async create(organizationId: string, params: LogSinkCreateParams, options?: RequestOptions): Promise<LogSink> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/log-sinks`, params, options);
   }
 
-  async list(tenantId: string, options?: RequestOptions): Promise<ListResult<LogSink>> {
-    return this._list(path`/v1/tenants/${tenantId}/log-sinks`, undefined, options);
+  async list(organizationId: string, options?: RequestOptions): Promise<ListResult<LogSink>> {
+    return this._list(path`/v1/organizations/${organizationId}/log-sinks`, undefined, options);
   }
 
   /** Switches streaming to the sink on or off. */
-  async setEnabled(tenantId: string, sinkId: string, enabled: boolean, options?: RequestOptions): Promise<void> {
-    await this._send("PATCH", path`/v1/tenants/${tenantId}/log-sinks/${sinkId}`, { enabled }, options);
+  async setEnabled(organizationId: string, sinkId: string, enabled: boolean, options?: RequestOptions): Promise<void> {
+    await this._send("PATCH", path`/v1/organizations/${organizationId}/log-sinks/${sinkId}`, { enabled }, options);
   }
 
-  async delete(tenantId: string, sinkId: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/log-sinks/${sinkId}`, options);
+  async delete(organizationId: string, sinkId: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/log-sinks/${sinkId}`, options);
   }
 
   /** Sends a test event to a saved sink. */
-  async test(tenantId: string, sinkId: string, options?: RequestOptions): Promise<LogSinkTestResult> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/log-sinks/${sinkId}/test`, undefined, options);
+  async test(organizationId: string, sinkId: string, options?: RequestOptions): Promise<LogSinkTestResult> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/log-sinks/${sinkId}/test`, undefined, options);
   }
 
   /** Sends a test event to a destination before saving it. */
-  async testDestination(tenantId: string, params: LogSinkCreateParams, options?: RequestOptions): Promise<LogSinkTestResult> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/log-sinks/test`, params, options);
+  async testDestination(organizationId: string, params: LogSinkCreateParams, options?: RequestOptions): Promise<LogSinkTestResult> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/log-sinks/test`, params, options);
   }
 }

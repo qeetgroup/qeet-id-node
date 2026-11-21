@@ -1,5 +1,5 @@
 # qeet-id-node — repository context metadata (Level 2).
-# Inherits qeetgroup/qeet-context (L0) and qeetgroup/qeet-id-context (L1).
+# Inherits qeetgroup/qeet-context (L0) and qeetgroup/qeet-id-files (L1).
 
 schema_version: 1
 
@@ -7,7 +7,7 @@ context: {type: repository, level: L2, canonical: true, last_verified: "2026-11-
 
 inheritance:
   organization: {repository: qeetgroup/qeet-context, level: L0}
-  product:      {repository: qeetgroup/qeet-id-context, level: L1}
+  product:      {repository: qeetgroup/qeet-id-files, level: L1}
 
 repository:
   name: qeet-id-node
@@ -27,7 +27,7 @@ runtime:
   runtime_deps: none         # fetch, Web Crypto and node:crypto only
   build: tsdown              # ES module (.mjs/.d.mts) + CommonJS (.cjs/.d.cts), one file per module
 
-module: {name: "@qeet-id/node", version: "0.1.0"}
+module: {name: "@qeet-id/node", version: "0.2.0"}
 
 architecture:
   client: QeetID                     # one client, resources as namespaces (ADR-0002)
@@ -41,7 +41,7 @@ architecture:
 contracts:
   consumes:
     api: qeet-id-server
-    documents: [api/openapi/auth.yaml, api/openapi/management.yaml, api/openapi/federation.yaml, api/openapi/developer.yaml, api/openapi/operations.yaml]
+    documents: [api/openapi/identity.yaml, api/openapi/access.yaml, api/openapi/federation.yaml, api/openapi/developer.yaml, api/openapi/operations.yaml]
     tiebreaker: internal/ handlers and internal/bootstrap/permissions.go (route policy)
     base_url: https://api.id.qeet.in
   auth_scheme: "Authorization: ApiKey <qk_...>"

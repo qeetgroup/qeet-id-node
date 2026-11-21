@@ -34,16 +34,20 @@ let rawTokenWarned = false;
  */
 export class TokenVault extends ApiResource {
   /** Registers a provider, or replaces one's settings. */
-  async createProvider(tenantId: string, params: TokenVaultProviderCreateParams, options?: RequestOptions): Promise<TokenVaultProvider> {
-    return this._send("POST", path`/v1/tenants/${tenantId}/vault/tokens/providers`, params, options);
+  async createProvider(
+    organizationId: string,
+    params: TokenVaultProviderCreateParams,
+    options?: RequestOptions,
+  ): Promise<TokenVaultProvider> {
+    return this._send("POST", path`/v1/organizations/${organizationId}/vault/tokens/providers`, params, options);
   }
 
-  async listProviders(tenantId: string, options?: RequestOptions): Promise<ListResult<TokenVaultProvider>> {
-    return this._list(path`/v1/tenants/${tenantId}/vault/tokens/providers`, undefined, options);
+  async listProviders(organizationId: string, options?: RequestOptions): Promise<ListResult<TokenVaultProvider>> {
+    return this._list(path`/v1/organizations/${organizationId}/vault/tokens/providers`, undefined, options);
   }
 
-  async deleteProvider(tenantId: string, provider: string, options?: RequestOptions): Promise<void> {
-    return this._delete(path`/v1/tenants/${tenantId}/vault/tokens/providers/${provider}`, options);
+  async deleteProvider(organizationId: string, provider: string, options?: RequestOptions): Promise<void> {
+    return this._delete(path`/v1/organizations/${organizationId}/vault/tokens/providers/${provider}`, options);
   }
 
   /**

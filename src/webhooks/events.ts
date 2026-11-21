@@ -48,9 +48,9 @@ export const WEBHOOK_EVENT_TYPES = [
   "credential.issued",
   "credential.revoked",
   "oidc.client_locked_out",
-  "tenant.suspended",
-  "tenant.reactivated",
-  "tenant.deleted",
+  "organization.suspended",
+  "organization.reactivated",
+  "organization.deleted",
 ] as const;
 
 /** An event a subscription can name. */
@@ -67,7 +67,7 @@ export const TEST_WEBHOOK_EVENT = "test.ping";
 export interface WebhookEvent<TData = Record<string, unknown>> {
   id: string;
   type: WebhookEventType | typeof TEST_WEBHOOK_EVENT | (string & {});
-  tenant_id: string;
+  organization_id: string;
   /** When the change happened (RFC 3339). */
   occurred_at: string;
   data: TData;

@@ -26,7 +26,7 @@ createServer(async (req, res) => {
       seen.add(event.id);
       switch (event.type) {
         case "user.created":
-          console.log("new user in", event.tenant_id, event.data);
+          console.log("new user in", event.organization_id, event.data);
           break;
         case "session.revoked":
           console.log("a session ended", event.data);

@@ -1,7 +1,7 @@
 {
   "name": "@qeet-id/node",
-  "version": "0.1.0",
-  "description": "The official server-side Node.js SDK for Qeet ID: manage users, organisations and access, verify webhooks and tokens, and run OAuth flows.",
+  "version": "0.2.0",
+  "description": "The official server-side Node.js SDK for Qeet ID: manage users, organizations and access, verify webhooks and tokens, and run OAuth flows.",
   "license": "MIT",
   "author": "Qeet Group",
   "homepage": "https://github.com/qeetgroup/qeet-id-node#readme",

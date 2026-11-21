@@ -17,7 +17,7 @@ export interface BotEvent {
 
 /** Recent bot-detection verdicts, a page at a time, with totals. */
 export interface BotActivity {
-  recent: BotEvent[];
+  items: BotEvent[];
   next_cursor?: string;
   total: number;
   stats: { blocked_24h: number; challenged_24h: number; threshold: number };
@@ -83,43 +83,43 @@ export interface AnomalySummary {
 /** Bot detection, adaptive-risk settings and sign-in anomalies. */
 export class ThreatDetection extends ApiResource {
   /** Recent bot-detection verdicts and statistics. */
-  async getBotActivity(tenantId: string, params: BotActivityParams = {}, options?: RequestOptions): Promise<BotActivity> {
-    return this._get(path`/v1/tenants/${tenantId}/security/bots`, { ...params }, options);
+  async getBotActivity(organizationId: string, params: BotActivityParams = {}, options?: RequestOptions): Promise<BotActivity> {
+    return this._get(path`/v1/organizations/${organizationId}/security/bots`, { ...params }, options);
   }
 
-  async getBotSettings(tenantId: string, options?: RequestOptions): Promise<BotSettings> {
-    return this._get(path`/v1/tenants/${tenantId}/security/bots/settings`, undefined, options);
+  async getBotSettings(organizationId: string, options?: RequestOptions): Promise<BotSettings> {
+    return this._get(path`/v1/organizations/${organizationId}/security/bots/settings`, undefined, options);
   }
 
   /** Replaces the bot-detection settings. */
-  async updateBotSettings(tenantId: string, settings: BotSettings, options?: RequestOptions): Promise<BotSettings> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/security/bots/settings`, settings, options);
+  async updateBotSettings(organizationId: string, settings: BotSettings, options?: RequestOptions): Promise<BotSettings> {
+    return this._send("PUT", path`/v1/organizations/${organizationId}/security/bots/settings`, settings, options);
   }
 
-  async getRiskSettings(tenantId: string, options?: RequestOptions): Promise<RiskSettings> {
-    return this._get(path`/v1/tenants/${tenantId}/security/risk-settings`, undefined, options);
+  async getRiskSettings(organizationId: string, options?: RequestOptions): Promise<RiskSettings> {
+    return this._get(path`/v1/organizations/${organizationId}/security/risk-settings`, undefined, options);
   }
 
   /** Replaces the risk settings. */
   async updateRiskSettings(
-    tenantId: string,
+    organizationId: string,
     settings: Omit<RiskSettings, "country_header_configured" | "country_last_seen_at">,
     options?: RequestOptions,
   ): Promise<RiskSettings> {
-    return this._send("PUT", path`/v1/tenants/${tenantId}/security/risk-settings`, settings, options);
+    return this._send("PUT", path`/v1/organizations/${organizationId}/security/risk-settings`, settings, options);
   }
 
   /** Lists sign-in anomalies, newest first. */
-  listAnomalies(tenantId: string, params: AnomalyListParams = {}, options?: RequestOptions): PagePromise<Anomaly> {
-    return this._page(() => path`/v1/tenants/${tenantId}/security/anomalies`, { ...params }, options);
+  listAnomalies(organizationId: string, params: AnomalyListParams = {}, options?: RequestOptions): PagePromise<Anomaly> {
+    return this._page(() => path`/v1/organizations/${organizationId}/security/anomalies`, { ...params }, options);
   }
 
-  async getAnomalySummary(tenantId: string, options?: RequestOptions): Promise<AnomalySummary> {
-    return this._get(path`/v1/tenants/${tenantId}/security/anomalies/summary`, undefined, options);
+  async getAnomalySummary(organizationId: string, options?: RequestOptions): Promise<AnomalySummary> {
+    return this._get(path`/v1/organizations/${organizationId}/security/anomalies/summary`, undefined, options);
   }
 
   /** Marks an anomaly reviewed. It blocks or revokes nothing by itself. */
-  async resolveAnomaly(tenantId: string, anomalyId: string, options?: RequestOptions): Promise<void> {
-    await this._send("POST", path`/v1/tenants/${tenantId}/security/anomalies/${anomalyId}/resolve`, undefined, options);
+  async resolveAnomaly(organizationId: string, anomalyId: string, options?: RequestOptions): Promise<void> {
+    await this._send("POST", path`/v1/organizations/${organizationId}/security/anomalies/${anomalyId}/resolve`, undefined, options);
   }
 }
